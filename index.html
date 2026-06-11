@@ -111,9 +111,25 @@ tr:hover td{background:var(--s2)}
 #toast.show{transform:translateY(0);opacity:1}
 #toast.err{border-color:var(--red)}
 
+/* Detail Modal */
+.dm-grid{display:grid;grid-template-columns:200px 1fr;gap:18px;align-items:start}
+.dm-img{width:100%;aspect-ratio:1;background:var(--s3);border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:48px}
+.dm-img img{width:100%;height:100%;object-fit:cover}
+.dm-fields{display:flex;flex-direction:column;gap:10px}
+.dm-row{display:flex;flex-direction:column;gap:2px}
+.dm-row .lbl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.dm-row .val{font-size:14px;font-weight:500}
+.dm-prices{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.dm-price-box{border-radius:8px;padding:10px;text-align:center}
+.dm-price-box .lbl{font-size:10px;color:var(--muted);font-weight:700;margin-bottom:2px}
+.dm-price-box .val{font-size:16px;font-weight:800}
+.prod-card{cursor:pointer}
+tr.clickable{cursor:pointer}
+
 @media(max-width:600px){
   .prod-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
   .sbar select{width:110px}
+  .dm-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -163,10 +179,6 @@ tr:hover td{background:var(--s2)}
         <div class="stat"><div class="v" id="s-stock">—</div><div class="l">ชิ้นในสต็อก</div></div>
         <div class="stat"><div class="v" id="s-sold">—</div><div class="l">ขายแล้ว (รายการ)</div></div>
         <div class="stat"><div class="v" id="s-profit">—</div><div class="l">กำไรรวม (฿)</div></div>
-      </div>
-      <div class="card">
-        <div class="card-title">⚠️ สินค้าใกล้หมด / หมดสต็อก</div>
-        <div id="low-stock-list"><div class="loading"><div class="spinner"></div>กำลังโหลด…</div></div>
       </div>
       <div class="card">
         <div class="card-title">🕐 ขายล่าสุด (10 รายการ)</div>
@@ -247,6 +259,21 @@ tr:hover td{background:var(--s2)}
   </main>
 </div>
 
+<!-- ─── Product Detail Modal ─── -->
+<div class="modal-bg" id="detail-modal" onclick="if(event.target===this)closeDetail()">
+  <div class="modal" style="max-width:600px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px">
+      <div>
+        <div class="modal-title" id="dm-sku" style="font-family:monospace;font-size:18px"></div>
+        <div id="dm-name" style="font-size:13px;color:var(--muted);margin-top:2px"></div>
+      </div>
+      <button onclick="closeDetail()" style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:22px;line-height:1;padding:0 4px">✕</button>
+    </div>
+    <div class="dm-grid" id="dm-body"></div>
+    <div class="modal-act" id="dm-actions" style="margin-top:18px"></div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script src="js/config.js"></script>
@@ -304,20 +331,6 @@ function renderDash() {
   document.getElementById('s-sold').textContent = sales.length;
   document.getElementById('s-profit').textContent = '฿' + totalProfit.toLocaleString('th-TH');
 
-  // สินค้าใกล้หมด
-  const low = activeProducts.filter(p => p.stock <= 1);
-  const lowEl = document.getElementById('low-stock-list');
-  if (!low.length) { lowEl.innerHTML = '<div class="empty"><div class="ic">✅</div>ไม่มีสินค้าหมดสต็อก</div>'; }
-  else {
-    lowEl.innerHTML = '<div class="tw"><table><thead><tr><th>รหัส</th><th>สินค้า</th><th>สต็อก</th><th>สถานะ</th></tr></thead><tbody>' +
-      low.map(p => `<tr>
-        <td><strong>${p.sku}</strong></td>
-        <td>${p.name}</td>
-        <td class="${p.stock===0?'b-low':''}">${p.stock}</td>
-        <td><span class="badge ${p.stock===0?'b-out':'b-ready'}">${p.status}</span></td>
-      </tr>`).join('') + '</tbody></table></div>';
-  }
-
   // ขายล่าสุด
   const recentEl = document.getElementById('recent-sales');
   const recent = [...sales].reverse().slice(0, 10);
@@ -357,7 +370,7 @@ function renderProducts() {
 
   if (viewMode === 'grid') {
     el.innerHTML = '<div class="prod-grid">' + list.map(p => `
-      <div class="prod-card">
+      <div class="prod-card" onclick="openDetail('${p.sku}')">
         <div class="prod-img">${p.imageUrl ? `<img src="${p.imageUrl}" alt="${p.name}" onerror="this.parentElement.innerHTML='💍'">` : '💍'}</div>
         <div class="prod-info">
           <div class="prod-meta" style="color:var(--muted);font-size:11px">${p.sku}</div>
@@ -365,7 +378,7 @@ function renderProducts() {
           <div class="prod-price">฿${p.sellPrice.toLocaleString('th-TH')}</div>
           <div class="prod-meta">สต็อก: <span class="${p.stock===0?'b-low':''}">${p.stock} ชิ้น</span></div>
         </div>
-        <div class="prod-actions">
+        <div class="prod-actions" onclick="event.stopPropagation()">
           <a href="add-product.html?sku=${p.sku}" class="btn bo sm">✏️ แก้ไข</a>
           <button onclick="quickSell('${p.sku}')" class="btn bg sm">🛒 ขาย</button>
         </div>
@@ -373,7 +386,7 @@ function renderProducts() {
     `).join('') + '</div>';
   } else {
     el.innerHTML = '<div class="tw"><table><thead><tr><th></th><th>รหัส</th><th>ชื่อสินค้า</th><th>ประเภท</th><th>วัสดุ</th><th>ราคาขาย</th><th>สต็อก</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody>' +
-      list.map(p => `<tr>
+      list.map(p => `<tr class="clickable" onclick="openDetail('${p.sku}')">
         <td>${p.imageUrl ? `<img src="${p.imageUrl}" class="tbl-img" onerror="this.src=''">` : '<div class="tbl-img" style="display:flex;align-items:center;justify-content:center;font-size:18px">💍</div>'}</td>
         <td><strong>${p.sku}</strong></td>
         <td>${p.name}</td>
@@ -382,7 +395,7 @@ function renderProducts() {
         <td>฿${p.sellPrice.toLocaleString('th-TH')}</td>
         <td class="${p.stock===0?'b-low':''}">${p.stock}</td>
         <td><span class="badge ${p.stock===0?'b-out':'b-ready'}">${p.status}</span></td>
-        <td>
+        <td onclick="event.stopPropagation()">
           <div class="row">
             <a href="add-product.html?sku=${p.sku}" class="btn bo sm">✏️</a>
             <button onclick="quickSell('${p.sku}')" class="btn bg sm">🛒</button>
@@ -508,6 +521,79 @@ function clearReportFilter() {
   document.getElementById('r-from').value = '';
   document.getElementById('r-to').value = '';
   renderReport();
+}
+
+// ─── Product Detail Modal ───
+function openDetail(sku) {
+  const p = products.find(x => x.sku === sku);
+  if (!p) return;
+
+  document.getElementById('dm-sku').textContent = p.sku;
+  document.getElementById('dm-name').textContent = p.name;
+
+  const gemLine = (p.gemType && p.gemType !== '-')
+    ? `${p.gemType}${p.gemWeight && p.gemWeight !== '-' ? ' ' + p.gemWeight + ' ct' : ''}`
+    : '—';
+
+  document.getElementById('dm-body').innerHTML = `
+    <div>
+      <div class="dm-img">${p.imageUrl
+        ? `<img src="${p.imageUrl}" alt="${p.name}" onerror="this.parentElement.innerHTML='💍'">`
+        : '💍'}</div>
+      <div style="margin-top:10px;text-align:center">
+        <span class="badge ${p.stock === 0 ? 'b-out' : 'b-ready'}">${p.status}</span>
+      </div>
+    </div>
+    <div class="dm-fields">
+      <div class="dm-row">
+        <span class="lbl">ประเภท / วัสดุ</span>
+        <span class="val">${p.category} · ${p.material}</span>
+      </div>
+      ${p.size && p.size !== '-' ? `
+      <div class="dm-row">
+        <span class="lbl">ขนาด</span>
+        <span class="val">${p.size}</span>
+      </div>` : ''}
+      <div class="dm-row">
+        <span class="lbl">น้ำหนักวัสดุ</span>
+        <span class="val">${p.weight} g</span>
+      </div>
+      <div class="dm-row">
+        <span class="lbl">พลอย / อัญมณี</span>
+        <span class="val">${gemLine}</span>
+      </div>
+      <div class="dm-prices">
+        <div class="dm-price-box" style="background:var(--s2)">
+          <div class="lbl">ราคาทุน</div>
+          <div class="val">฿${p.costPrice.toLocaleString('th-TH')}</div>
+        </div>
+        <div class="dm-price-box" style="background:rgba(201,168,76,.1);border:1px solid var(--gold-d)">
+          <div class="lbl">ราคาขาย</div>
+          <div class="val" style="color:var(--gold)">฿${p.sellPrice.toLocaleString('th-TH')}</div>
+        </div>
+      </div>
+      <div class="dm-row">
+        <span class="lbl">สต็อกคงเหลือ</span>
+        <span class="val ${p.stock === 0 ? 'b-low' : ''}">${p.stock} ชิ้น</span>
+      </div>
+      ${p.notes && p.notes !== '-' ? `
+      <div class="dm-row">
+        <span class="lbl">หมายเหตุ</span>
+        <span class="val" style="color:var(--muted);font-size:13px">${p.notes}</span>
+      </div>` : ''}
+    </div>
+  `;
+
+  document.getElementById('dm-actions').innerHTML = `
+    <a href="add-product.html?sku=${p.sku}" class="btn bo">✏️ แก้ไข</a>
+    ${p.stock > 0 ? `<button onclick="closeDetail();quickSell('${p.sku}')" class="btn bg">🛒 บันทึกขาย</button>` : ''}
+  `;
+
+  document.getElementById('detail-modal').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detail-modal').classList.remove('open');
 }
 
 // ─── Toast ───

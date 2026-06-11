@@ -61,6 +61,10 @@ select option{background:var(--s2)}
 .img-upload-area input[type=file]{display:none}
 
 .sku-badge{display:inline-block;background:rgba(201,168,76,.15);color:var(--gold);border:1px solid var(--gold-d);border-radius:6px;padding:4px 12px;font-size:13px;font-weight:700;font-family:monospace}
+input.sku-badge{width:120px;outline:none;cursor:text;border-color:var(--gold-d)}
+input.sku-badge:focus{border-color:var(--gold);background:rgba(201,168,76,.25)}
+input.sku-badge.sku-error{border-color:var(--red);color:var(--red)}
+#sku-hint{font-size:10px;margin-top:3px;height:12px;color:var(--red)}
 .status-preview{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;display:inline-block}
 .sp-ready{background:rgba(92,186,125,.15);color:var(--green);border:1px solid rgba(92,186,125,.3)}
 .sp-out{background:rgba(224,85,85,.15);color:var(--red);border:1px solid rgba(224,85,85,.3)}
@@ -106,7 +110,10 @@ select option{background:var(--s2)}
       <div class="card" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
         <div>
           <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">รหัสสินค้า</div>
-          <span class="sku-badge" id="sku-display">—</span>
+          <input class="sku-badge" id="sku-display" type="text" placeholder="—"
+            oninput="this.value=this.value.toUpperCase();this.classList.remove('sku-error');document.getElementById('sku-hint').textContent=''"
+            onblur="validateSkuInput()">
+          <div id="sku-hint"></div>
         </div>
         <div class="fg" style="min-width:160px">
           <label>ประเภทสินค้า *</label>
@@ -212,7 +219,7 @@ async function onAppReady() {
   } else {
     const cat = document.getElementById('p-cat').value;
     const newSku = await generateSku(cat);
-    document.getElementById('sku-display').textContent = newSku;
+    document.getElementById('sku-display').value = newSku;
     updateStatusPreview();
   }
 }
@@ -222,7 +229,8 @@ async function loadEditProduct() {
   editProduct = all.find(p => p.sku === editSku);
   if (!editProduct) { showToast('ไม่พบสินค้า ' + editSku, 'error'); return; }
 
-  document.getElementById('sku-display').textContent = editProduct.sku;
+  document.getElementById('sku-display').value = editProduct.sku;
+  document.getElementById('sku-display').disabled = true; // แก้ไขโหมด: ล็อครหัส
   document.getElementById('p-cat').value = editProduct.category;
   document.getElementById('p-mat').value = editProduct.material;
   document.getElementById('p-weight').value = editProduct.weight;
@@ -245,7 +253,7 @@ async function onCatChange() {
   if (!editSku) {
     const cat = document.getElementById('p-cat').value;
     const newSku = await generateSku(cat);
-    document.getElementById('sku-display').textContent = newSku;
+    document.getElementById('sku-display').value = newSku;
   }
 }
 
@@ -298,6 +306,22 @@ function buildAutoName(cat, mat, gem) {
   return cat + m + g;
 }
 
+async function validateSkuInput() {
+  if (editSku) return; // แก้ไขโหมด: ไม่ต้องตรวจ
+  const input = document.getElementById('sku-display');
+  const sku = input.value.trim().toUpperCase();
+  if (!sku || sku === '—') return;
+  input.value = sku;
+  const existing = await sheetsGetAllProducts().catch(() => []);
+  if (existing.some(p => p.sku === sku)) {
+    input.classList.add('sku-error');
+    document.getElementById('sku-hint').textContent = '⚠️ รหัสซ้ำ';
+  } else {
+    input.classList.remove('sku-error');
+    document.getElementById('sku-hint').textContent = '';
+  }
+}
+
 async function saveProduct() {
   const cat = document.getElementById('p-cat').value;
   const mat = document.getElementById('p-mat').value;
@@ -310,7 +334,18 @@ async function saveProduct() {
   btn.textContent = '⏳ กำลังบันทึก…';
 
   try {
-    const sku = document.getElementById('sku-display').textContent;
+    const sku = document.getElementById('sku-display').value.trim().toUpperCase();
+    if (!sku) { showToast('กรุณาระบุรหัสสินค้าค่ะ', 'error'); btn.disabled=false; btn.textContent='💾 บันทึกสินค้า'; return; }
+    // ตรวจซ้ำ (เฉพาะโหมดเพิ่มใหม่)
+    if (!editSku) {
+      const existing = await sheetsGetAllProducts();
+      if (existing.some(p => p.sku === sku)) {
+        showToast(`รหัส ${sku} มีอยู่แล้วค่ะ กรุณาเปลี่ยนรหัส`, 'error');
+        document.getElementById('sku-display').classList.add('sku-error');
+        document.getElementById('sku-hint').textContent = 'รหัสซ้ำ';
+        btn.disabled=false; btn.textContent='💾 บันทึกสินค้า'; return;
+      }
+    }
     const stock = Number(document.getElementById('p-stock').value) || 0;
     const gemVal = document.getElementById('p-gem').value.trim();
     // ชื่อสินค้า: ถ้าแก้ไขให้ใช้ชื่อเดิม ถ้าใหม่ให้ auto-generate

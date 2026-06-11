@@ -102,11 +102,18 @@ select option{background:var(--s2)}
     <div id="form-loading" class="loading"><div class="spinner"></div>กำลังโหลดข้อมูล…</div>
 
     <div id="form-area" style="display:none">
-      <!-- SKU + Status -->
+      <!-- SKU + Category + Status -->
       <div class="card" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
         <div>
           <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">รหัสสินค้า</div>
           <span class="sku-badge" id="sku-display">—</span>
+        </div>
+        <div class="fg" style="min-width:160px">
+          <label>ประเภทสินค้า *</label>
+          <select id="p-cat" onchange="onCatChange()">
+            <option>แหวน</option><option>ต่างหู</option><option>จี้</option>
+            <option>กำไล</option><option>สร้อยข้อมือ</option><option>สร้อยคอ</option>
+          </select>
         </div>
         <div style="margin-left:auto" id="status-display"></div>
       </div>
@@ -137,14 +144,6 @@ select option{background:var(--s2)}
           <div class="card">
             <div class="card-title">ข้อมูลหลัก</div>
             <div class="grid g2">
-              <div class="fg"><label>ชื่อสินค้า *</label><input id="p-name" placeholder="เช่น แหวนเงินไพลิน"></div>
-              <div class="fg">
-                <label>ประเภทสินค้า *</label>
-                <select id="p-cat" onchange="onCatChange()">
-                  <option>แหวน</option><option>ต่างหู</option><option>จี้</option>
-                  <option>กำไล</option><option>สร้อยข้อมือ</option><option>สร้อยคอ</option>
-                </select>
-              </div>
               <div class="fg">
                 <label>วัสดุหลัก *</label>
                 <select id="p-mat">
@@ -153,6 +152,7 @@ select option{background:var(--s2)}
                 </select>
               </div>
               <div class="fg"><label>น้ำหนักวัสดุ (g) *</label><input type="number" id="p-weight" placeholder="0.00" min="0.01" step="0.01"></div>
+              <div class="fg"><label>ขนาด (ไซส์นิ้ว / ความยาว)</label><input id="p-size" placeholder="เช่น ไซส์ 52 / 45 cm / —"></div>
             </div>
           </div>
 
@@ -223,10 +223,10 @@ async function loadEditProduct() {
   if (!editProduct) { showToast('ไม่พบสินค้า ' + editSku, 'error'); return; }
 
   document.getElementById('sku-display').textContent = editProduct.sku;
-  document.getElementById('p-name').value = editProduct.name;
   document.getElementById('p-cat').value = editProduct.category;
   document.getElementById('p-mat').value = editProduct.material;
   document.getElementById('p-weight').value = editProduct.weight;
+  document.getElementById('p-size').value = editProduct.size || '';
   document.getElementById('p-gem').value = editProduct.gemType === '-' ? '' : editProduct.gemType;
   document.getElementById('p-gemw').value = editProduct.gemWeight === '-' ? '' : editProduct.gemWeight;
   document.getElementById('p-cost').value = editProduct.costPrice;
@@ -290,13 +290,19 @@ function updateStatusPreview() {
     : '<span class="status-preview sp-out">❌ หมดสต็อก</span>';
 }
 
+// สร้างชื่อสินค้าอัตโนมัติ จาก ประเภท + วัสดุ + พลอย
+function buildAutoName(cat, mat, gem) {
+  const matShort = {'เงิน 925':'เงิน','ทองคำ':'ทอง','ทองขาว':'ทองขาว','ทองชมพู':'ทองชมพู','ทองคำขาว (Platinum)':'แพลตตินัม'};
+  const m = matShort[mat] || mat;
+  const g = gem && gem !== '-' ? gem : '';
+  return cat + m + g;
+}
+
 async function saveProduct() {
-  const name = document.getElementById('p-name').value.trim();
   const cat = document.getElementById('p-cat').value;
   const mat = document.getElementById('p-mat').value;
   const weight = document.getElementById('p-weight').value;
 
-  if (!name) { showToast('กรุณาใส่ชื่อสินค้าค่ะ', 'error'); return; }
   if (!weight || Number(weight) <= 0) { showToast('น้ำหนักวัสดุต้องมากกว่า 0 ค่ะ', 'error'); return; }
 
   const btn = document.getElementById('btn-save');
@@ -306,6 +312,9 @@ async function saveProduct() {
   try {
     const sku = document.getElementById('sku-display').textContent;
     const stock = Number(document.getElementById('p-stock').value) || 0;
+    const gemVal = document.getElementById('p-gem').value.trim();
+    // ชื่อสินค้า: ถ้าแก้ไขให้ใช้ชื่อเดิม ถ้าใหม่ให้ auto-generate
+    const name = editProduct ? editProduct.name : buildAutoName(cat, mat, gemVal || '');
 
     // อัปโหลดรูปถ้ามีไฟล์ใหม่
     let imageUrl = document.getElementById('p-imgurl').value.trim();
@@ -323,8 +332,9 @@ async function saveProduct() {
       category: cat,
       material: mat,
       weight,
-      gemType: document.getElementById('p-gem').value.trim() || '-',
+      gemType: gemVal || '-',
       gemWeight: document.getElementById('p-gemw').value.trim() || '-',
+      size: document.getElementById('p-size').value.trim() || '-',
       costPrice: Number(document.getElementById('p-cost').value) || 0,
       sellPrice: Number(document.getElementById('p-sell').value) || 0,
       stock,

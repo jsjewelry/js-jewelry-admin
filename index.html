@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JS Jewelry — Admin Dashboard</title>
+<style>
+:root {
+  --gold:#c9a84c;--gold-l:#f0d485;--gold-d:#8a6d2f;
+  --bg:#0f0f0f;--s1:#1a1a1a;--s2:#222;--s3:#2c2c2c;
+  --border:#333;--text:#f0e8d0;--muted:#9a8a6a;
+  --red:#e05555;--green:#5cba7d;--blue:#5b9bd5;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh}
+
+/* ─── Login Screen ─── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:20px;background:linear-gradient(135deg,#0f0f0f,#1a1500)}
+.login-logo{font-size:32px;font-weight:800;color:var(--gold);letter-spacing:3px;text-align:center}
+.login-logo span{display:block;font-size:13px;color:var(--muted);font-weight:400;letter-spacing:1px;margin-top:4px}
+.login-card{background:var(--s1);border:1px solid var(--gold-d);border-radius:var(--r);padding:36px 40px;text-align:center;max-width:380px;width:100%}
+.login-card p{color:var(--muted);font-size:13px;margin-bottom:24px;line-height:1.6}
+.btn-login{background:var(--gold);color:#111;border:none;padding:11px 28px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;transition:.2s;width:100%;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-login:hover{background:var(--gold-l)}
+.btn-login svg{width:18px;height:18px}
+
+/* ─── App Screen ─── */
+#app-screen{display:none}
+header{background:linear-gradient(135deg,var(--s1),#1a1500);border-bottom:1px solid var(--gold-d);padding:12px 20px;display:flex;align-items:center;gap:12px}
+.logo{font-size:18px;font-weight:800;color:var(--gold);letter-spacing:2px}
+.logo span{font-size:11px;display:block;color:var(--muted);font-weight:400;letter-spacing:0}
+.header-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+.btn-signout{background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;transition:.2s}
+.btn-signout:hover{border-color:var(--red);color:var(--red)}
+.hdate{background:var(--gold-d);color:var(--gold-l);padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600}
+
+.tabs{display:flex;background:var(--s1);border-bottom:1px solid var(--border);overflow-x:auto;padding:0 16px;gap:2px}
+.tab{padding:12px 16px;cursor:pointer;font-size:13px;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;transition:.2s}
+.tab:hover{color:var(--gold-l)}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+
+main{padding:18px;max-width:1280px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+.stat{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:16px;text-align:center}
+.stat .v{font-size:26px;font-weight:800;color:var(--gold)}
+.stat .l{font-size:11px;color:var(--muted);margin-top:3px}
+
+.card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:16px}
+.card-title{font-size:14px;font-weight:700;color:var(--gold);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+.btn{padding:7px 14px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:.2s;display:inline-flex;align-items:center;gap:5px;text-decoration:none;white-space:nowrap}
+.bg{background:var(--gold);color:#111}.bg:hover{background:var(--gold-l)}
+.bo{background:transparent;border:1px solid var(--gold-d);color:var(--gold)}.bo:hover{background:var(--gold-d)}
+.br{background:var(--red);color:#fff}.br:hover{opacity:.85}
+.sm{padding:4px 10px;font-size:12px}
+
+.sbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.sbar input{flex:1;min-width:160px}
+.sbar select{width:130px}
+
+input,select{background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px 10px;font-size:13px;outline:none;transition:.2s}
+input:focus,select:focus{border-color:var(--gold)}
+select option{background:var(--s2)}
+
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 12px;color:var(--muted);font-size:11px;font-weight:700;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.5px}
+td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:var(--s2)}
+
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}
+.b-ready{background:rgba(92,186,125,.15);color:#7dd4a0}
+.b-out{background:rgba(224,85,85,.15);color:var(--red)}
+.b-low{color:var(--red);font-weight:700}
+
+.prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.prod-card{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:.2s}
+.prod-card:hover{border-color:var(--gold-d);transform:translateY(-2px)}
+.prod-img{width:100%;height:150px;object-fit:cover;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:32px;color:var(--muted)}
+.prod-img img{width:100%;height:150px;object-fit:cover}
+.prod-info{padding:10px}
+.prod-name{font-size:12px;font-weight:600;margin-bottom:3px;line-height:1.4}
+.prod-price{font-size:14px;font-weight:800;color:var(--gold)}
+.prod-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.prod-actions{display:flex;gap:5px;padding:0 10px 10px}
+
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.empty{text-align:center;padding:32px;color:var(--muted);font-size:13px}
+.empty .ic{font-size:28px;margin-bottom:6px}
+.tbl-img{width:40px;height:40px;border-radius:6px;object-fit:cover;background:var(--s3)}
+
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center;padding:16px}
+.modal-bg.open{display:flex}
+.modal{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:22px;width:100%;max-width:480px;max-height:92vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:700;color:var(--gold);margin-bottom:16px}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.fg label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase}
+.modal-act{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+
+/* Loading */
+.loading{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--muted);gap:10px;font-size:13px}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Toast */
+#toast{position:fixed;bottom:20px;right:20px;background:var(--s3);border:1px solid var(--gold-d);color:var(--text);padding:10px 16px;border-radius:8px;font-size:13px;transform:translateY(60px);opacity:0;transition:.3s;z-index:999;max-width:300px}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.err{border-color:var(--red)}
+
+@media(max-width:600px){
+  .prod-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .sbar select{width:110px}
+}
+</style>
+</head>
+<body>
+
+<!-- ─── Login Screen ─── -->
+<div id="login-screen">
+  <div class="login-logo">💎 JS Jewelry<span>ระบบจัดการหลังร้าน</span></div>
+  <div class="login-card">
+    <p>เข้าสู่ระบบด้วย Google Account เพื่อเข้าถึงข้อมูลสินค้าและการขาย</p>
+    <button class="btn-login" onclick="signIn()">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      เข้าสู่ระบบด้วย Google
+    </button>
+  </div>
+</div>
+
+<!-- ─── App Screen ─── -->
+<div id="app-screen">
+  <header>
+    <div>
+      <div class="logo">💎 JS Jewelry<span>Admin Dashboard</span></div>
+    </div>
+    <div class="header-actions">
+      <span class="hdate" id="hdate"></span>
+      <button class="btn-signout" onclick="signOut()">ออกจากระบบ</button>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" onclick="goTab('dash')">🏠 หน้าหลัก</div>
+    <div class="tab" onclick="goTab('products')">💍 สินค้าทั้งหมด</div>
+    <div class="tab" onclick="goTab('sales')">🛒 บันทึกขาย</div>
+    <div class="tab" onclick="goTab('report')">📊 รายงาน</div>
+  </div>
+
+  <main>
+    <!-- ─── Dashboard ─── -->
+    <div class="page active" id="page-dash">
+      <div class="stats" id="stats-row">
+        <div class="stat"><div class="v" id="s-total">—</div><div class="l">สินค้าทั้งหมด</div></div>
+        <div class="stat"><div class="v" id="s-stock">—</div><div class="l">ชิ้นในสต็อก</div></div>
+        <div class="stat"><div class="v" id="s-sold">—</div><div class="l">ขายแล้ว (รายการ)</div></div>
+        <div class="stat"><div class="v" id="s-profit">—</div><div class="l">กำไรรวม (฿)</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">⚠️ สินค้าใกล้หมด / หมดสต็อก</div>
+        <div id="low-stock-list"><div class="loading"><div class="spinner"></div>กำลังโหลด…</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🕐 ขายล่าสุด (10 รายการ)</div>
+        <div id="recent-sales"><div class="loading"><div class="spinner"></div>กำลังโหลด…</div></div>
+      </div>
+    </div>
+
+    <!-- ─── Products ─── -->
+    <div class="page" id="page-products">
+      <div class="row" style="margin-bottom:14px">
+        <a href="add-product.html" class="btn bg">➕ เพิ่มสินค้าใหม่</a>
+        <div class="vtoggle" style="display:flex;background:var(--s2);border-radius:6px;padding:3px;gap:2px;margin-left:auto">
+          <button id="vg" onclick="setView('grid')" style="padding:5px 12px;border:none;background:var(--s3);color:var(--gold);border-radius:4px;cursor:pointer;font-size:12px">⊞ กริด</button>
+          <button id="vl" onclick="setView('list')" style="padding:5px 12px;border:none;background:transparent;color:var(--muted);border-radius:4px;cursor:pointer;font-size:12px">☰ ตาราง</button>
+        </div>
+      </div>
+      <div class="sbar">
+        <input id="search" placeholder="🔍 ค้นหาชื่อ / รหัส…" oninput="renderProducts()">
+        <select id="filter-cat" onchange="renderProducts()">
+          <option value="">ทุกประเภท</option>
+          <option>แหวน</option><option>ต่างหู</option><option>จี้</option>
+          <option>กำไล</option><option>สร้อยข้อมือ</option><option>สร้อยคอ</option>
+        </select>
+        <select id="filter-status" onchange="renderProducts()">
+          <option value="">ทุกสถานะ</option>
+          <option>พร้อมขาย</option><option>หมดสต็อก</option>
+        </select>
+      </div>
+      <div id="products-container"><div class="loading"><div class="spinner"></div>กำลังโหลด…</div></div>
+    </div>
+
+    <!-- ─── Sales ─── -->
+    <div class="page" id="page-sales">
+      <div class="card">
+        <div class="card-title">🛒 บันทึกการขาย</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+          <div class="fg">
+            <label>เลือกสินค้า</label>
+            <select id="sl-prod" onchange="onSaleProdChange()"><option value="">— เลือกสินค้า —</option></select>
+          </div>
+          <div class="fg">
+            <label>จำนวน</label>
+            <input type="number" id="sl-qty" value="1" min="1" oninput="calcSale()">
+          </div>
+          <div class="fg">
+            <label>ราคาขาย (฿)</label>
+            <input type="number" id="sl-price" oninput="calcSale()">
+          </div>
+          <div class="fg">
+            <label>กำไรโดยประมาณ</label>
+            <input type="text" id="sl-profit" readonly style="color:var(--green);font-weight:700">
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <button class="btn bg" onclick="recordSale()">💰 บันทึกการขาย</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">📋 ประวัติการขาย</div>
+        <div id="sales-container"><div class="loading"><div class="spinner"></div>กำลังโหลด…</div></div>
+      </div>
+    </div>
+
+    <!-- ─── Report ─── -->
+    <div class="page" id="page-report">
+      <div class="card">
+        <div class="card-title">📊 สรุปรายได้และกำไร</div>
+        <div class="sbar">
+          <input type="date" id="r-from">
+          <span style="color:var(--muted);font-size:13px">ถึง</span>
+          <input type="date" id="r-to">
+          <button class="btn bo sm" onclick="renderReport()">🔍 กรอง</button>
+          <button class="btn bo sm" onclick="clearReportFilter()">✕ ล้าง</button>
+        </div>
+        <div id="report-container"><div class="loading"><div class="spinner"></div>กำลังโหลด…</div></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/sheets-api.js"></script>
+<script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+<script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+
+<script>
+// ─── State ───
+let products = [];
+let sales = [];
+let viewMode = 'grid';
+
+// ─── Called after sign-in ───
+async function onAppReady() {
+  document.getElementById('hdate').textContent = new Date().toLocaleDateString('th-TH', {
+    year: 'numeric', month: 'long', day: 'numeric'
+  });
+  await loadAll();
+}
+
+async function loadAll() {
+  try {
+    [products, sales] = await Promise.all([sheetsGetAllProducts(), sheetsGetAllSales()]);
+    renderDash();
+    renderProducts();
+    fillSaleSelect();
+    renderSales();
+    renderReport();
+  } catch (e) {
+    showToast('โหลดข้อมูลไม่ได้: ' + e.message, 'error');
+    console.error(e);
+  }
+}
+
+// ─── Tabs ───
+function goTab(t) {
+  document.querySelectorAll('.tab').forEach((el,i) => el.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  const tabs = ['dash','products','sales','report'];
+  const idx = tabs.indexOf(t);
+  document.querySelectorAll('.tab')[idx].classList.add('active');
+  document.getElementById('page-' + t).classList.add('active');
+}
+
+// ─── Dashboard ───
+function renderDash() {
+  const activeProducts = products.filter(p => p.sku);
+  const totalStock = activeProducts.reduce((s,p) => s + p.stock, 0);
+  const totalProfit = sales.reduce((s,x) => s + x.profit, 0);
+
+  document.getElementById('s-total').textContent = activeProducts.length;
+  document.getElementById('s-stock').textContent = totalStock;
+  document.getElementById('s-sold').textContent = sales.length;
+  document.getElementById('s-profit').textContent = '฿' + totalProfit.toLocaleString('th-TH');
+
+  // สินค้าใกล้หมด
+  const low = activeProducts.filter(p => p.stock <= 1);
+  const lowEl = document.getElementById('low-stock-list');
+  if (!low.length) { lowEl.innerHTML = '<div class="empty"><div class="ic">✅</div>ไม่มีสินค้าหมดสต็อก</div>'; }
+  else {
+    lowEl.innerHTML = '<div class="tw"><table><thead><tr><th>รหัส</th><th>สินค้า</th><th>สต็อก</th><th>สถานะ</th></tr></thead><tbody>' +
+      low.map(p => `<tr>
+        <td><strong>${p.sku}</strong></td>
+        <td>${p.name}</td>
+        <td class="${p.stock===0?'b-low':''}">${p.stock}</td>
+        <td><span class="badge ${p.stock===0?'b-out':'b-ready'}">${p.status}</span></td>
+      </tr>`).join('') + '</tbody></table></div>';
+  }
+
+  // ขายล่าสุด
+  const recentEl = document.getElementById('recent-sales');
+  const recent = [...sales].reverse().slice(0, 10);
+  if (!recent.length) { recentEl.innerHTML = '<div class="empty"><div class="ic">🛒</div>ยังไม่มีการขาย</div>'; return; }
+  recentEl.innerHTML = '<div class="tw"><table><thead><tr><th>วันที่</th><th>สินค้า</th><th>จำนวน</th><th>ราคาขาย</th><th>กำไร</th></tr></thead><tbody>' +
+    recent.map(s => `<tr>
+      <td>${s.date}</td>
+      <td>${s.productName} <small style="color:var(--muted)">(${s.sku})</small></td>
+      <td>${s.qty}</td>
+      <td>฿${s.sellPrice.toLocaleString('th-TH')}</td>
+      <td style="color:var(--green);font-weight:700">฿${s.profit.toLocaleString('th-TH')}</td>
+    </tr>`).join('') + '</tbody></table></div>';
+}
+
+// ─── Products ───
+function setView(v) {
+  viewMode = v;
+  document.getElementById('vg').style.cssText = v==='grid' ? 'padding:5px 12px;border:none;background:var(--s3);color:var(--gold);border-radius:4px;cursor:pointer;font-size:12px' : 'padding:5px 12px;border:none;background:transparent;color:var(--muted);border-radius:4px;cursor:pointer;font-size:12px';
+  document.getElementById('vl').style.cssText = v==='list' ? 'padding:5px 12px;border:none;background:var(--s3);color:var(--gold);border-radius:4px;cursor:pointer;font-size:12px' : 'padding:5px 12px;border:none;background:transparent;color:var(--muted);border-radius:4px;cursor:pointer;font-size:12px';
+  renderProducts();
+}
+
+function renderProducts() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const cat = document.getElementById('filter-cat').value;
+  const status = document.getElementById('filter-status').value;
+
+  let list = products.filter(p => p.sku).filter(p => {
+    if (q && !p.name.toLowerCase().includes(q) && !p.sku.toLowerCase().includes(q)) return false;
+    if (cat && p.category !== cat) return false;
+    if (status && p.status !== status) return false;
+    return true;
+  });
+
+  const el = document.getElementById('products-container');
+  if (!list.length) { el.innerHTML = '<div class="empty"><div class="ic">💍</div>ไม่พบสินค้า</div>'; return; }
+
+  if (viewMode === 'grid') {
+    el.innerHTML = '<div class="prod-grid">' + list.map(p => `
+      <div class="prod-card">
+        <div class="prod-img">${p.imageUrl ? `<img src="${p.imageUrl}" alt="${p.name}" onerror="this.parentElement.innerHTML='💍'">` : '💍'}</div>
+        <div class="prod-info">
+          <div class="prod-meta" style="color:var(--muted);font-size:11px">${p.sku}</div>
+          <div class="prod-name">${p.name}</div>
+          <div class="prod-price">฿${p.sellPrice.toLocaleString('th-TH')}</div>
+          <div class="prod-meta">สต็อก: <span class="${p.stock===0?'b-low':''}">${p.stock} ชิ้น</span></div>
+        </div>
+        <div class="prod-actions">
+          <a href="add-product.html?sku=${p.sku}" class="btn bo sm">✏️ แก้ไข</a>
+          <button onclick="quickSell('${p.sku}')" class="btn bg sm">🛒 ขาย</button>
+        </div>
+      </div>
+    `).join('') + '</div>';
+  } else {
+    el.innerHTML = '<div class="tw"><table><thead><tr><th></th><th>รหัส</th><th>ชื่อสินค้า</th><th>ประเภท</th><th>วัสดุ</th><th>ราคาขาย</th><th>สต็อก</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody>' +
+      list.map(p => `<tr>
+        <td>${p.imageUrl ? `<img src="${p.imageUrl}" class="tbl-img" onerror="this.src=''">` : '<div class="tbl-img" style="display:flex;align-items:center;justify-content:center;font-size:18px">💍</div>'}</td>
+        <td><strong>${p.sku}</strong></td>
+        <td>${p.name}</td>
+        <td>${p.category}</td>
+        <td>${p.material}</td>
+        <td>฿${p.sellPrice.toLocaleString('th-TH')}</td>
+        <td class="${p.stock===0?'b-low':''}">${p.stock}</td>
+        <td><span class="badge ${p.stock===0?'b-out':'b-ready'}">${p.status}</span></td>
+        <td>
+          <div class="row">
+            <a href="add-product.html?sku=${p.sku}" class="btn bo sm">✏️</a>
+            <button onclick="quickSell('${p.sku}')" class="btn bg sm">🛒</button>
+          </div>
+        </td>
+      </tr>`).join('') + '</tbody></table></div>';
+  }
+}
+
+// ─── Sales ───
+function fillSaleSelect() {
+  const sel = document.getElementById('sl-prod');
+  sel.innerHTML = '<option value="">— เลือกสินค้า —</option>' +
+    products.filter(p => p.sku && p.stock > 0).map(p =>
+      `<option value="${p.sku}" data-price="${p.sellPrice}" data-cost="${p.costPrice}">${p.sku} — ${p.name} (สต็อก: ${p.stock})</option>`
+    ).join('');
+}
+
+function onSaleProdChange() {
+  const opt = document.getElementById('sl-prod').selectedOptions[0];
+  if (opt && opt.dataset.price) {
+    document.getElementById('sl-price').value = opt.dataset.price;
+    calcSale();
+  }
+}
+
+function calcSale() {
+  const opt = document.getElementById('sl-prod').selectedOptions[0];
+  const qty = Number(document.getElementById('sl-qty').value) || 1;
+  const price = Number(document.getElementById('sl-price').value) || 0;
+  const cost = opt ? Number(opt.dataset.cost) || 0 : 0;
+  const profit = (price - cost) * qty;
+  document.getElementById('sl-profit').value = '฿' + profit.toLocaleString('th-TH');
+}
+
+async function recordSale() {
+  const sku = document.getElementById('sl-prod').value;
+  const qty = Number(document.getElementById('sl-qty').value) || 1;
+  const price = Number(document.getElementById('sl-price').value) || 0;
+  if (!sku) { showToast('กรุณาเลือกสินค้า', 'error'); return; }
+
+  const prod = products.find(p => p.sku === sku);
+  if (!prod) { showToast('ไม่พบสินค้า', 'error'); return; }
+  if (prod.stock < qty) { showToast(`สต็อกไม่พอ (เหลือ ${prod.stock} ชิ้น)`, 'error'); return; }
+
+  try {
+    const sale = {
+      id: generateId(),
+      date: todayISO(),
+      sku,
+      productName: prod.name,
+      qty,
+      sellPrice: price,
+      costPrice: prod.costPrice,
+      profit: (price - prod.costPrice) * qty
+    };
+    await sheetsAddSale(sale);
+    const newStock = prod.stock - qty;
+    await sheetsUpdateStock(sku, newStock);
+    prod.stock = newStock;
+    prod.status = newStock <= 0 ? 'หมดสต็อก' : 'พร้อมขาย';
+    sales.push(sale);
+    renderDash(); renderProducts(); fillSaleSelect(); renderSales(); renderReport();
+    showToast(`✅ บันทึกการขาย ${sku} x${qty} เรียบร้อยค่ะ`);
+    document.getElementById('sl-prod').value = '';
+    document.getElementById('sl-qty').value = 1;
+    document.getElementById('sl-price').value = '';
+    document.getElementById('sl-profit').value = '';
+  } catch (e) {
+    showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error');
+  }
+}
+
+function quickSell(sku) {
+  goTab('sales');
+  document.getElementById('sl-prod').value = sku;
+  onSaleProdChange();
+}
+
+function renderSales() {
+  const el = document.getElementById('sales-container');
+  const list = [...sales].reverse();
+  if (!list.length) { el.innerHTML = '<div class="empty"><div class="ic">🛒</div>ยังไม่มีประวัติการขาย</div>'; return; }
+  el.innerHTML = '<div class="tw"><table><thead><tr><th>วันที่</th><th>รหัส</th><th>สินค้า</th><th>จำนวน</th><th>ราคาขาย</th><th>กำไร</th></tr></thead><tbody>' +
+    list.map(s => `<tr>
+      <td>${s.date}</td>
+      <td>${s.sku}</td>
+      <td>${s.productName}</td>
+      <td>${s.qty}</td>
+      <td>฿${s.sellPrice.toLocaleString('th-TH')}</td>
+      <td style="color:var(--green);font-weight:700">฿${s.profit.toLocaleString('th-TH')}</td>
+    </tr>`).join('') + '</tbody></table></div>';
+}
+
+// ─── Report ───
+function renderReport() {
+  const from = document.getElementById('r-from').value;
+  const to = document.getElementById('r-to').value;
+  let list = [...sales];
+  if (from) list = list.filter(s => s.date >= from);
+  if (to) list = list.filter(s => s.date <= to);
+
+  const totalSell = list.reduce((s,x) => s + x.sellPrice * x.qty, 0);
+  const totalProfit = list.reduce((s,x) => s + x.profit, 0);
+
+  const el = document.getElementById('report-container');
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px">
+      <div class="stat"><div class="v">${list.length}</div><div class="l">รายการขาย</div></div>
+      <div class="stat"><div class="v">฿${totalSell.toLocaleString('th-TH')}</div><div class="l">ยอดขายรวม</div></div>
+      <div class="stat"><div class="v" style="color:var(--green)">฿${totalProfit.toLocaleString('th-TH')}</div><div class="l">กำไรรวม</div></div>
+    </div>
+    ${list.length ? '<div class="tw"><table><thead><tr><th>วันที่</th><th>สินค้า</th><th>จำนวน</th><th>ราคาขาย</th><th>กำไร</th></tr></thead><tbody>' +
+      [...list].reverse().map(s => `<tr>
+        <td>${s.date}</td><td>${s.productName}</td><td>${s.qty}</td>
+        <td>฿${s.sellPrice.toLocaleString('th-TH')}</td>
+        <td style="color:var(--green)">฿${s.profit.toLocaleString('th-TH')}</td>
+      </tr>`).join('') + '</tbody></table></div>'
+    : '<div class="empty"><div class="ic">📊</div>ไม่มีข้อมูลในช่วงเวลานี้</div>'}
+  `;
+}
+function clearReportFilter() {
+  document.getElementById('r-from').value = '';
+  document.getElementById('r-to').value = '';
+  renderReport();
+}
+
+// ─── Toast ───
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (type==='error' ? ' err' : '');
+  setTimeout(() => t.className = '', 3000);
+}
+</script>
+</body>
+</html>

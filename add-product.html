@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JS Jewelry — เพิ่ม/แก้ไขสินค้า</title>
+<style>
+:root {
+  --gold:#c9a84c;--gold-l:#f0d485;--gold-d:#8a6d2f;
+  --bg:#0f0f0f;--s1:#1a1a1a;--s2:#222;--s3:#2c2c2c;
+  --border:#333;--text:#f0e8d0;--muted:#9a8a6a;
+  --red:#e05555;--green:#5cba7d;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh}
+
+/* Login */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:20px}
+.btn-login{background:var(--gold);color:#111;border:none;padding:11px 28px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;width:240px;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-login svg{width:18px;height:18px}
+.login-logo{font-size:28px;font-weight:800;color:var(--gold);letter-spacing:3px}
+
+/* App */
+#app-screen{display:none}
+header{background:linear-gradient(135deg,var(--s1),#1a1500);border-bottom:1px solid var(--gold-d);padding:12px 20px;display:flex;align-items:center;gap:12px}
+.logo{font-size:18px;font-weight:800;color:var(--gold);letter-spacing:2px}
+.logo span{font-size:11px;display:block;color:var(--muted);font-weight:400;letter-spacing:0}
+.back-btn{background:transparent;border:1px solid var(--gold-d);color:var(--gold);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;text-decoration:none;display:flex;align-items:center;gap:5px}
+.back-btn:hover{background:var(--gold-d)}
+
+main{padding:18px;max-width:860px;margin:0 auto}
+
+.card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px}
+.card-title{font-size:15px;font-weight:700;color:var(--gold);margin-bottom:18px}
+
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+
+input,select,textarea{background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 11px;font-size:13px;outline:none;width:100%;transition:.2s;font-family:'Segoe UI',sans-serif}
+input:focus,select:focus,textarea:focus{border-color:var(--gold)}
+textarea{resize:vertical;min-height:68px}
+select option{background:var(--s2)}
+
+.btn{padding:9px 18px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:.2s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.bg{background:var(--gold);color:#111}.bg:hover{background:var(--gold-l)}
+.bo{background:transparent;border:1px solid var(--gold-d);color:var(--gold)}.bo:hover{background:var(--gold-d)}
+.br{background:var(--red);color:#fff}.br:hover{opacity:.85}
+.sm{padding:5px 11px;font-size:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* Image Upload */
+.img-upload-area{width:100%;height:220px;background:var(--s2);border:2px dashed var(--border);border-radius:var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:.2s;color:var(--muted);font-size:13px;gap:8px;position:relative;overflow:hidden}
+.img-upload-area:hover{border-color:var(--gold-d);color:var(--gold)}
+.img-upload-area.has-img{border-style:solid;border-color:var(--gold-d)}
+.img-upload-area img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.img-overlay{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;opacity:0;transition:.2s;flex-direction:column;gap:6px;font-size:12px;color:#fff}
+.img-upload-area:hover .img-overlay{opacity:1}
+.img-upload-area input[type=file]{display:none}
+
+.sku-badge{display:inline-block;background:rgba(201,168,76,.15);color:var(--gold);border:1px solid var(--gold-d);border-radius:6px;padding:4px 12px;font-size:13px;font-weight:700;font-family:monospace}
+.status-preview{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;display:inline-block}
+.sp-ready{background:rgba(92,186,125,.15);color:var(--green);border:1px solid rgba(92,186,125,.3)}
+.sp-out{background:rgba(224,85,85,.15);color:var(--red);border:1px solid rgba(224,85,85,.3)}
+
+.upload-progress{margin-top:8px;font-size:12px;color:var(--muted);text-align:center;min-height:18px}
+
+.loading{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--muted);gap:10px;font-size:13px}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+#toast{position:fixed;bottom:20px;right:20px;background:var(--s3);border:1px solid var(--gold-d);color:var(--text);padding:10px 16px;border-radius:8px;font-size:13px;transform:translateY(60px);opacity:0;transition:.3s;z-index:999;max-width:300px}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.err{border-color:var(--red)}
+
+@media(max-width:600px){main{padding:12px}}
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-screen">
+  <div class="login-logo">💎 JS Jewelry</div>
+  <button class="btn-login" onclick="signIn()">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+    เข้าสู่ระบบด้วย Google
+  </button>
+</div>
+
+<!-- App -->
+<div id="app-screen">
+  <header>
+    <div>
+      <div class="logo">💎 JS Jewelry<span id="page-title">เพิ่มสินค้าใหม่</span></div>
+    </div>
+    <a href="index.html" class="back-btn" style="margin-left:auto">← กลับหน้าหลัก</a>
+  </header>
+
+  <main>
+    <div id="form-loading" class="loading"><div class="spinner"></div>กำลังโหลดข้อมูล…</div>
+
+    <div id="form-area" style="display:none">
+      <!-- SKU + Status -->
+      <div class="card" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">รหัสสินค้า</div>
+          <span class="sku-badge" id="sku-display">—</span>
+        </div>
+        <div style="margin-left:auto" id="status-display"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+        <!-- Left: Image -->
+        <div class="card" style="padding:16px">
+          <div class="fg">
+            <label>รูปภาพสินค้า</label>
+            <div class="img-upload-area" id="img-area" onclick="document.getElementById('img-input').click()">
+              <div style="font-size:32px">📷</div>
+              <div>คลิกเพื่ออัปโหลด</div>
+              <div style="font-size:11px">JPG / PNG</div>
+              <input type="file" id="img-input" accept="image/*" onchange="handleImgSelect(this)">
+              <div class="img-overlay"><span style="font-size:22px">🔄</span><span>เปลี่ยนรูป</span></div>
+            </div>
+            <div class="upload-progress" id="upload-status"></div>
+            <button class="btn bo sm" style="margin-top:4px" onclick="clearImg()">🗑️ ลบรูป</button>
+          </div>
+          <div class="fg" style="margin-top:8px">
+            <label>หรือใส่ URL รูป</label>
+            <input type="url" id="p-imgurl" placeholder="https://..." oninput="previewUrl(this.value)">
+          </div>
+        </div>
+
+        <!-- Right: Fields -->
+        <div>
+          <div class="card">
+            <div class="card-title">ข้อมูลหลัก</div>
+            <div class="grid g2">
+              <div class="fg"><label>ชื่อสินค้า *</label><input id="p-name" placeholder="เช่น แหวนเงินไพลิน"></div>
+              <div class="fg">
+                <label>ประเภทสินค้า *</label>
+                <select id="p-cat" onchange="onCatChange()">
+                  <option>แหวน</option><option>ต่างหู</option><option>จี้</option>
+                  <option>กำไล</option><option>สร้อยข้อมือ</option><option>สร้อยคอ</option>
+                </select>
+              </div>
+              <div class="fg">
+                <label>วัสดุหลัก *</label>
+                <select id="p-mat">
+                  <option>เงิน 925</option><option>ทองคำ</option><option>ทองขาว</option>
+                  <option>ทองชมพู</option><option>ทองคำขาว (Platinum)</option>
+                </select>
+              </div>
+              <div class="fg"><label>น้ำหนักวัสดุ (g) *</label><input type="number" id="p-weight" placeholder="0.00" min="0.01" step="0.01"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">พลอย / อัญมณี</div>
+            <div class="grid g2">
+              <div class="fg"><label>ชนิดพลอย</label><input id="p-gem" placeholder="ไพลิน / มรกต / — ถ้าไม่มี"></div>
+              <div class="fg"><label>น้ำหนักพลอย (ct)</label><input id="p-gemw" placeholder="— ถ้าไม่มี"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">ราคาและสต็อก</div>
+            <div class="grid g2">
+              <div class="fg"><label>ราคาทุน (฿)</label><input type="number" id="p-cost" placeholder="0" min="0"></div>
+              <div class="fg"><label>ราคาขาย (฿)</label><input type="number" id="p-sell" placeholder="0" min="0"></div>
+              <div class="fg"><label>จำนวนสต็อก</label><input type="number" id="p-stock" placeholder="0" min="0" oninput="updateStatusPreview()"></div>
+              <div class="fg"><label>หมายเหตุ</label><input id="p-notes" placeholder="— หรือเว้นว่าง"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="row" style="justify-content:flex-end;margin-top:4px;gap:10px">
+        <a href="index.html" class="btn bo">ยกเลิก</a>
+        <button class="btn br" id="btn-delete" style="display:none" onclick="deleteProduct()">🗑️ ลบสินค้า</button>
+        <button class="btn bg" id="btn-save" onclick="saveProduct()">💾 บันทึกสินค้า</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/sheets-api.js"></script>
+<script src="js/drive-api.js"></script>
+<script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+<script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+
+<script>
+const params = new URLSearchParams(location.search);
+const editSku = params.get('sku'); // ถ้ามี = โหมดแก้ไข
+let editProduct = null;
+let selectedFile = null;
+
+async function onAppReady() {
+  document.getElementById('form-loading').style.display = 'none';
+  document.getElementById('form-area').style.display = 'block';
+
+  if (editSku) {
+    document.getElementById('page-title').textContent = 'แก้ไขสินค้า';
+    document.getElementById('btn-delete').style.display = 'inline-flex';
+    await loadEditProduct();
+  } else {
+    const cat = document.getElementById('p-cat').value;
+    const newSku = await generateSku(cat);
+    document.getElementById('sku-display').textContent = newSku;
+    updateStatusPreview();
+  }
+}
+
+async function loadEditProduct() {
+  const all = await sheetsGetAllProducts();
+  editProduct = all.find(p => p.sku === editSku);
+  if (!editProduct) { showToast('ไม่พบสินค้า ' + editSku, 'error'); return; }
+
+  document.getElementById('sku-display').textContent = editProduct.sku;
+  document.getElementById('p-name').value = editProduct.name;
+  document.getElementById('p-cat').value = editProduct.category;
+  document.getElementById('p-mat').value = editProduct.material;
+  document.getElementById('p-weight').value = editProduct.weight;
+  document.getElementById('p-gem').value = editProduct.gemType === '-' ? '' : editProduct.gemType;
+  document.getElementById('p-gemw').value = editProduct.gemWeight === '-' ? '' : editProduct.gemWeight;
+  document.getElementById('p-cost').value = editProduct.costPrice;
+  document.getElementById('p-sell').value = editProduct.sellPrice;
+  document.getElementById('p-stock').value = editProduct.stock;
+  document.getElementById('p-notes').value = editProduct.notes === '-' ? '' : editProduct.notes;
+
+  if (editProduct.imageUrl) {
+    document.getElementById('p-imgurl').value = editProduct.imageUrl;
+    previewUrl(editProduct.imageUrl);
+  }
+  updateStatusPreview();
+}
+
+async function onCatChange() {
+  if (!editSku) {
+    const cat = document.getElementById('p-cat').value;
+    const newSku = await generateSku(cat);
+    document.getElementById('sku-display').textContent = newSku;
+  }
+}
+
+function handleImgSelect(input) {
+  const f = input.files[0];
+  if (!f) return;
+  selectedFile = f;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const area = document.getElementById('img-area');
+    area.innerHTML = `<img src="${e.target.result}"><div class="img-overlay"><span style="font-size:22px">🔄</span><span>เปลี่ยนรูป</span></div><input type="file" id="img-input" accept="image/*" onchange="handleImgSelect(this)">`;
+    area.classList.add('has-img');
+    area.onclick = () => document.getElementById('img-input').click();
+    document.getElementById('upload-status').textContent = '📎 รูปพร้อมอัปโหลดเมื่อกด บันทึก';
+  };
+  reader.readAsDataURL(f);
+}
+
+function previewUrl(url) {
+  if (!url) return;
+  const area = document.getElementById('img-area');
+  area.innerHTML = `<img src="${url}" onerror="this.parentElement.innerHTML='<span style=\\'font-size:32px\\'>📷</span><div>URL ไม่ถูกต้อง</div>'"><div class="img-overlay"><span style="font-size:22px">🔄</span><span>เปลี่ยนรูป</span></div><input type="file" id="img-input" accept="image/*" onchange="handleImgSelect(this)">`;
+  area.classList.add('has-img');
+  area.onclick = () => document.getElementById('img-input').click();
+}
+
+function clearImg() {
+  selectedFile = null;
+  document.getElementById('p-imgurl').value = '';
+  const area = document.getElementById('img-area');
+  area.className = 'img-upload-area';
+  area.innerHTML = `<div style="font-size:32px">📷</div><div>คลิกเพื่ออัปโหลด</div><div style="font-size:11px">JPG / PNG</div><input type="file" id="img-input" accept="image/*" onchange="handleImgSelect(this)"><div class="img-overlay"><span style="font-size:22px">🔄</span><span>เปลี่ยนรูป</span></div>`;
+  area.onclick = () => document.getElementById('img-input').click();
+  document.getElementById('upload-status').textContent = '';
+}
+
+function updateStatusPreview() {
+  const stock = Number(document.getElementById('p-stock').value) || 0;
+  const el = document.getElementById('status-display');
+  el.innerHTML = stock > 0
+    ? '<span class="status-preview sp-ready">✅ พร้อมขาย</span>'
+    : '<span class="status-preview sp-out">❌ หมดสต็อก</span>';
+}
+
+async function saveProduct() {
+  const name = document.getElementById('p-name').value.trim();
+  const cat = document.getElementById('p-cat').value;
+  const mat = document.getElementById('p-mat').value;
+  const weight = document.getElementById('p-weight').value;
+
+  if (!name) { showToast('กรุณาใส่ชื่อสินค้าค่ะ', 'error'); return; }
+  if (!weight || Number(weight) <= 0) { showToast('น้ำหนักวัสดุต้องมากกว่า 0 ค่ะ', 'error'); return; }
+
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.textContent = '⏳ กำลังบันทึก…';
+
+  try {
+    const sku = document.getElementById('sku-display').textContent;
+    const stock = Number(document.getElementById('p-stock').value) || 0;
+
+    // อัปโหลดรูปถ้ามีไฟล์ใหม่
+    let imageUrl = document.getElementById('p-imgurl').value.trim();
+    if (selectedFile) {
+      document.getElementById('upload-status').textContent = '☁️ กำลังอัปโหลดรูป…';
+      const compressed = await compressImage(selectedFile);
+      imageUrl = await driveUploadImage(compressed, sku);
+      document.getElementById('upload-status').textContent = '✅ อัปโหลดรูปสำเร็จ';
+    }
+
+    const product = {
+      id: editProduct ? editProduct.id : generateId(),
+      sku,
+      name,
+      category: cat,
+      material: mat,
+      weight,
+      gemType: document.getElementById('p-gem').value.trim() || '-',
+      gemWeight: document.getElementById('p-gemw').value.trim() || '-',
+      costPrice: Number(document.getElementById('p-cost').value) || 0,
+      sellPrice: Number(document.getElementById('p-sell').value) || 0,
+      stock,
+      status: stock > 0 ? 'พร้อมขาย' : 'หมดสต็อก',
+      imageUrl,
+      notes: document.getElementById('p-notes').value.trim() || '-',
+      createdAt: editProduct ? editProduct.createdAt : new Date().toISOString()
+    };
+
+    if (editSku) {
+      await sheetsUpdateProduct(product);
+      showToast(`✅ อัปเดต ${sku} เรียบร้อยค่ะ`);
+    } else {
+      await sheetsAddProduct(product);
+      showToast(`✅ เพิ่ม ${sku} เรียบร้อยค่ะ`);
+    }
+
+    setTimeout(() => location.href = 'index.html', 1200);
+  } catch (e) {
+    showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error');
+    console.error(e);
+    btn.disabled = false;
+    btn.textContent = '💾 บันทึกสินค้า';
+    document.getElementById('upload-status').textContent = '';
+  }
+}
+
+async function deleteProduct() {
+  if (!editSku) return;
+  if (!confirm(`ยืนยันลบสินค้า ${editSku} ออกจากระบบ?`)) return;
+  try {
+    await sheetsDeleteProduct(editSku);
+    showToast(`🗑️ ลบ ${editSku} เรียบร้อยแล้ว`);
+    setTimeout(() => location.href = 'index.html', 1200);
+  } catch (e) {
+    showToast('ลบไม่สำเร็จ: ' + e.message, 'error');
+  }
+}
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (type==='error' ? ' err' : '');
+  setTimeout(() => t.className = '', 3200);
+}
+</script>
+</body>
+</html>

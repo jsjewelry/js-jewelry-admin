@@ -12,7 +12,7 @@
 
 const PRODUCTS_RANGE = `${CONFIG.PRODUCTS_SHEET}!A:P`;
 const SALES_RANGE    = `${CONFIG.SALES_SHEET}!A:H`;
-const GEMS_RANGE     = `${CONFIG.GEMS_SHEET}!A:K`;
+const GEMS_RANGE     = `${CONFIG.GEMS_SHEET}!A:M`;
 
 // ─── PRODUCTS ──────────────────────────────────────────────
 
@@ -202,9 +202,10 @@ async function ensureSalesHeader() {
 }
 
 // ─── GEMS ──────────────────────────────────────────────────
-//  Gems Sheet columns (A-K):
+//  Gems Sheet columns (A-M):
 //  A:id  B:code  C:gemType  D:weight(ct)  E:shape
-//  F:size(mm)  G:pricePerCt  H:stock  I:status  J:notes  K:createdAt
+//  F:size(mm)  G:pricePerCt  H:stock  I:status  J:notes
+//  K:createdAt  L:imageUrl  M:origin
 
 async function sheetsGetAllGems() {
   await ensureGemsHeader();
@@ -229,7 +230,9 @@ function rowToGem(r) {
     stock:      Number(r[7] || 0),
     status:     r[8]  || 'พร้อมขาย',
     notes:      r[9]  || '-',
-    createdAt:  r[10] || ''
+    createdAt:  r[10] || '',
+    imageUrl:   r[11] || '',
+    origin:     r[12] || '-'
   };
 }
 
@@ -237,7 +240,8 @@ function gemToRow(g) {
   return [
     g.id, g.code, g.gemType, g.weight, g.shape,
     g.size || '-', g.pricePerCt, g.stock, g.status,
-    g.notes || '-', g.createdAt
+    g.notes || '-', g.createdAt,
+    g.imageUrl || '', g.origin || '-'
   ];
 }
 
@@ -255,7 +259,7 @@ async function sheetsAddGem(gem) {
 async function sheetsUpdateGem(gem) {
   const rowNum = await findGemRow(gem.code);
   if (!rowNum) throw new Error(`ไม่พบรหัส: ${gem.code}`);
-  const range = `${CONFIG.GEMS_SHEET}!A${rowNum}:K${rowNum}`;
+  const range = `${CONFIG.GEMS_SHEET}!A${rowNum}:M${rowNum}`;
   await gapi.client.sheets.spreadsheets.values.update({
     spreadsheetId: CONFIG.SHEET_ID,
     range,
@@ -294,7 +298,7 @@ async function ensureGemsHeader() {
   try {
     const resp = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: CONFIG.SHEET_ID,
-      range: `${CONFIG.GEMS_SHEET}!A1:K1`
+      range: `${CONFIG.GEMS_SHEET}!A1:M1`
     });
     if (!resp.result.values || resp.result.values.length === 0) {
       needHeader = true;
@@ -314,10 +318,10 @@ async function ensureGemsHeader() {
   if (needHeader) {
     await gapi.client.sheets.spreadsheets.values.update({
       spreadsheetId: CONFIG.SHEET_ID,
-      range: `${CONFIG.GEMS_SHEET}!A1:K1`,
+      range: `${CONFIG.GEMS_SHEET}!A1:M1`,
       valueInputOption: 'RAW',
       resource: {
-        values: [['id','code','gemType','weight','shape','size','pricePerCt','stock','status','notes','createdAt']]
+        values: [['id','code','gemType','weight','shape','size','pricePerCt','stock','status','notes','createdAt','imageUrl','origin']]
       }
     });
   }

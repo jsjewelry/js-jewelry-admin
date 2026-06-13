@@ -289,11 +289,29 @@ async function findGemRow(code) {
 }
 
 async function ensureGemsHeader() {
-  const resp = await gapi.client.sheets.spreadsheets.values.get({
-    spreadsheetId: CONFIG.SHEET_ID,
-    range: `${CONFIG.GEMS_SHEET}!A1:K1`
-  });
-  if (!resp.result.values || resp.result.values.length === 0) {
+  // ลอง GET ก่อน — ถ้า 400 แสดงว่า sheet tab ยังไม่มี ต้องสร้างก่อน
+  let needHeader = false;
+  try {
+    const resp = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: CONFIG.SHEET_ID,
+      range: `${CONFIG.GEMS_SHEET}!A1:K1`
+    });
+    if (!resp.result.values || resp.result.values.length === 0) {
+      needHeader = true;
+    }
+  } catch (e) {
+    // sheet tab ไม่มี → สร้างใหม่
+    await gapi.client.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: CONFIG.SHEET_ID,
+      resource: {
+        requests: [{
+          addSheet: { properties: { title: CONFIG.GEMS_SHEET } }
+        }]
+      }
+    });
+    needHeader = true;
+  }
+  if (needHeader) {
     await gapi.client.sheets.spreadsheets.values.update({
       spreadsheetId: CONFIG.SHEET_ID,
       range: `${CONFIG.GEMS_SHEET}!A1:K1`,

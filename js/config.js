@@ -15,6 +15,9 @@ const CONFIG = {
   // https://drive.google.com/drive/folders/<<FOLDER_ID>>
   DRIVE_FOLDER_ID: '1EcVhw1jEvzrgLJyIcSfKFX8pFCsJwm3-',
 
+  // Google Drive Folder ID สำหรับเก็บรูปพลอย (แยกจากสินค้า)
+  GEMS_FOLDER_ID: '1EcVhw1jEvzrgLJyIcSfKFX8pFCsJwm3-',
+
   // ชื่อ Sheet ใน Spreadsheet
   PRODUCTS_SHEET: 'Products',
   SALES_SHEET: 'Sales',

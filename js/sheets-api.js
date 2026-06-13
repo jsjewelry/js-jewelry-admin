@@ -22,7 +22,7 @@ async function sheetsGetAllProducts() {
     range: PRODUCTS_RANGE
   });
   const rows = resp.result.values || [];
-  if (rows.length <= 1) return [];
+  if (rows.length <= 1) return []; // header only
   return rows.slice(1).map(rowToProduct);
 }
 
@@ -56,8 +56,11 @@ function productToRow(p) {
   ];
 }
 
+// สร้างสินค้าใหม่
 async function sheetsAddProduct(product) {
+  // สร้าง header ถ้ายังไม่มี
   await ensureProductsHeader();
+
   const row = productToRow(product);
   await gapi.client.sheets.spreadsheets.values.append({
     spreadsheetId: CONFIG.SHEET_ID,
@@ -68,6 +71,7 @@ async function sheetsAddProduct(product) {
   });
 }
 
+// อัปเดตสินค้าตาม SKU (ค้นหา row แล้ว update)
 async function sheetsUpdateProduct(product) {
   const rowNum = await findProductRow(product.sku);
   if (!rowNum) throw new Error(`ไม่พบ SKU: ${product.sku}`);
@@ -80,6 +84,7 @@ async function sheetsUpdateProduct(product) {
   });
 }
 
+// อัปเดตเฉพาะ stock + status
 async function sheetsUpdateStock(sku, newStock) {
   const rowNum = await findProductRow(sku);
   if (!rowNum) throw new Error(`ไม่พบ SKU: ${sku}`);
@@ -93,9 +98,11 @@ async function sheetsUpdateStock(sku, newStock) {
   });
 }
 
+// ลบสินค้า (ล้างแถว)
 async function sheetsDeleteProduct(sku) {
   const rowNum = await findProductRow(sku);
   if (!rowNum) throw new Error(`ไม่พบ SKU: ${sku}`);
+  // ล้างข้อมูลในแถว (ไม่ลบแถวจริง เพื่อรักษา row index)
   const range = `${CONFIG.PRODUCTS_SHEET}!A${rowNum}:O${rowNum}`;
   await gapi.client.sheets.spreadsheets.values.clear({
     spreadsheetId: CONFIG.SHEET_ID,
@@ -103,6 +110,7 @@ async function sheetsDeleteProduct(sku) {
   });
 }
 
+// หาเลขแถวของ sku (row 1 = header, ข้อมูลเริ่ม row 2)
 async function findProductRow(sku) {
   const resp = await gapi.client.sheets.spreadsheets.values.get({
     spreadsheetId: CONFIG.SHEET_ID,
@@ -110,7 +118,7 @@ async function findProductRow(sku) {
   });
   const skus = (resp.result.values || []);
   for (let i = 1; i < skus.length; i++) {
-    if (skus[i][0] === sku) return i + 1;
+    if (skus[i][0] === sku) return i + 1; // +1 เพราะ Sheets เริ่มที่ 1
   }
   return null;
 }
@@ -126,7 +134,11 @@ async function ensureProductsHeader() {
       range: `${CONFIG.PRODUCTS_SHEET}!A1:P1`,
       valueInputOption: 'RAW',
       resource: {
-        values: [['id','sku','name','category','material','weight','gemType','gemWeight','costPrice','sellPrice','stock','status','imageUrl','notes','createdAt','size']]
+        values: [[
+          'id','sku','name','category','material','weight',
+          'gemType','gemWeight','costPrice','sellPrice',
+          'stock','status','imageUrl','notes','createdAt','size'
+        ]]
       }
     });
   }
@@ -315,6 +327,7 @@ function todayISO() {
   });
 }
 
+// สร้าง SKU อัตโนมัติตามประเภท
 async function generateSku(category) {
   const prefixMap = {
     'แหวน': 'SR', 'ต่างหู': 'SE', 'จี้': 'SP',

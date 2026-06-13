@@ -1,5 +1,6 @@
 // ============================================================
 //  config.js — JS Jewelry Admin
+//  แก้ค่าด้านล่างหลังตั้งค่า Google Cloud + Sheet + Drive
 // ============================================================
 
 const CONFIG = {
@@ -8,6 +9,7 @@ const CONFIG = {
   DRIVE_FOLDER_ID: '1EcVhw1jEvzrgLJyIcSfKFX8pFCsJwm3-',
   PRODUCTS_SHEET: 'Products',
   SALES_SHEET: 'Sales',
+  GEMS_SHEET: 'Gems',
   SCOPES: [
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/drive.file'

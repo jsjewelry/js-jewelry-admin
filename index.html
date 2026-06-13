@@ -169,6 +169,7 @@ tr.clickable{cursor:pointer}
     <div class="tab" onclick="goTab('products')">💍 สินค้าทั้งหมด</div>
     <div class="tab" onclick="goTab('sales')">🛒 บันทึกขาย</div>
     <div class="tab" onclick="goTab('report')">📊 รายงาน</div>
+    <div class="tab" onclick="goTab('gems')">💎 สต็อคพลอย</div>
   </div>
 
   <main>
@@ -242,6 +243,29 @@ tr.clickable{cursor:pointer}
       </div>
     </div>
 
+    <!-- ─── Gems ─── -->
+    <div class="page" id="page-gems">
+      <div class="row" style="margin-bottom:14px">
+        <button class="btn bg" onclick="openAddGem()">➕ เพิ่มพลอยใหม่</button>
+      </div>
+      <div class="stats" id="gem-stats-row" style="margin-bottom:14px">
+        <div class="stat"><div class="v" id="gs-total">—</div><div class="l">ชนิดพลอย (lot)</div></div>
+        <div class="stat"><div class="v" id="gs-stock">—</div><div class="l">สต็อกรวม (pcs)</div></div>
+        <div class="stat"><div class="v" id="gs-ready">—</div><div class="l">lot พร้อมขาย</div></div>
+        <div class="stat"><div class="v" id="gs-out">—</div><div class="l">lot หมดสต็อก</div></div>
+      </div>
+      <div class="card">
+        <div class="sbar">
+          <input id="gem-search" placeholder="🔍 ค้นหาชนิด / รหัส…" oninput="renderGems()">
+          <select id="gem-filter-status" onchange="renderGems()">
+            <option value="">ทุกสถานะ</option>
+            <option>พร้อมขาย</option><option>หมดสต็อก</option>
+          </select>
+        </div>
+        <div id="gems-container"><div class="loading"><div class="spinner"></div>กำลังโหลด…</div></div>
+      </div>
+    </div>
+
     <!-- ─── Report ─── -->
     <div class="page" id="page-report">
       <div class="card">
@@ -257,6 +281,96 @@ tr.clickable{cursor:pointer}
       </div>
     </div>
   </main>
+</div>
+
+<!-- ─── Gem Add/Edit Modal ─── -->
+<div class="modal-bg" id="gem-modal" onclick="if(event.target===this)closeGemModal()">
+  <div class="modal" style="max-width:500px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <div class="modal-title" id="gem-modal-title">➕ เพิ่มพลอยใหม่</div>
+      <button onclick="closeGemModal()" style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:22px;line-height:1;padding:0 4px">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg" style="grid-column:1/-1">
+        <label>ชนิดพลอย *</label>
+        <input id="gm-type" list="gem-list" placeholder="เช่น ไพลิน, ทับทิม…">
+        <datalist id="gem-list">
+          <option>ไพลิน</option><option>ทับทิม</option><option>ทับทิมสยาม</option>
+          <option>ทับทิมพม่า</option><option>เขียวส่อง</option><option>นิล</option>
+          <option>บุษราคัม</option><option>โมรา</option><option>โมราเขียว</option>
+          <option>ซิทริน</option><option>อเมทิส</option><option>โกเมน</option>
+          <option>เพอริดอท</option><option>เพทาย</option><option>โทปาส</option>
+          <option>บลูโทปาส</option><option>โรโดไลท์</option><option>อความารีน</option>
+          <option>พิงค์แซฟร์</option><option>ออเร้นแซฟไฟร์</option><option>สตาร์ดำ</option>
+          <option>นพเก้า</option><option>แฟนซี</option>
+        </datalist>
+      </div>
+      <div class="fg">
+        <label>น้ำหนัก (ct) *</label>
+        <input type="number" id="gm-weight" step="0.01" min="0.01" placeholder="0.00">
+      </div>
+      <div class="fg">
+        <label>จำนวนเม็ด (pcs) *</label>
+        <input type="number" id="gm-stock" min="0" placeholder="0">
+      </div>
+      <div class="fg">
+        <label>ลักษณะ (shape) *</label>
+        <select id="gm-shape">
+          <option value="">— เลือก —</option>
+          <option>กลม</option><option>เหลี่ยม</option><option>หยดน้ำ</option>
+          <option>มาร์คีส</option><option>หัวใจ</option><option>โอวัล</option>
+          <option>คุชชั่น</option><option>อีเมอรัลด์</option><option>แฟนซี</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>ราคาต่อกะรัต (฿)</label>
+        <input type="number" id="gm-price" min="0" placeholder="0">
+      </div>
+      <div class="fg">
+        <label>ขนาด (mm)</label>
+        <input id="gm-size" placeholder="เช่น 5x3, 6mm">
+      </div>
+      <div class="fg" style="grid-column:1/-1">
+        <label>หมายเหตุ</label>
+        <input id="gm-notes" placeholder="รายละเอียดเพิ่มเติม">
+      </div>
+    </div>
+    <div class="modal-act">
+      <button class="btn bo" onclick="closeGemModal()">ยกเลิก</button>
+      <button class="btn bg" onclick="saveGem()" id="gem-save-btn">💎 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Gem Detail Modal ─── -->
+<div class="modal-bg" id="gem-detail-modal" onclick="if(event.target===this)closeGemDetail()">
+  <div class="modal" style="max-width:500px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px">
+      <div>
+        <div class="modal-title" id="gdm-code" style="font-family:monospace;font-size:18px"></div>
+        <div id="gdm-type" style="font-size:14px;color:var(--muted);margin-top:2px"></div>
+      </div>
+      <button onclick="closeGemDetail()" style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:22px;line-height:1;padding:0 4px">✕</button>
+    </div>
+    <div id="gdm-body"></div>
+    <div class="modal-act" id="gdm-actions"></div>
+  </div>
+</div>
+
+<!-- ─── Restock Modal ─── -->
+<div class="modal-bg" id="restock-modal" onclick="if(event.target===this)closeRestock()">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-title">📦 ปรับสต็อกพลอย</div>
+    <div id="restock-info" style="color:var(--muted);font-size:13px;margin-bottom:14px"></div>
+    <div class="fg">
+      <label>สต็อกใหม่ (pcs)</label>
+      <input type="number" id="restock-val" min="0">
+    </div>
+    <div class="modal-act">
+      <button class="btn bo" onclick="closeRestock()">ยกเลิก</button>
+      <button class="btn bg" onclick="confirmRestock()">✅ บันทึก</button>
+    </div>
+  </div>
 </div>
 
 <!-- ─── Product Detail Modal ─── -->
@@ -286,7 +400,10 @@ tr.clickable{cursor:pointer}
 // ─── State ───
 let products = [];
 let sales = [];
+let gems = [];
 let viewMode = 'grid';
+let _editGemCode = null;  // null = add, string = edit mode
+let _restockCode = null;
 
 // ─── Called after sign-in ───
 async function onAppReady() {
@@ -298,12 +415,14 @@ async function onAppReady() {
 
 async function loadAll() {
   try {
-    [products, sales] = await Promise.all([sheetsGetAllProducts(), sheetsGetAllSales()]);
+    [products, sales, gems] = await Promise.all([sheetsGetAllProducts(), sheetsGetAllSales(), sheetsGetAllGems()]);
     renderDash();
     renderProducts();
     fillSaleSelect();
     renderSales();
     renderReport();
+    renderGemStats();
+    renderGems();
   } catch (e) {
     showToast('โหลดข้อมูลไม่ได้: ' + e.message, 'error');
     console.error(e);
@@ -312,9 +431,9 @@ async function loadAll() {
 
 // ─── Tabs ───
 function goTab(t) {
-  document.querySelectorAll('.tab').forEach((el,i) => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-  const tabs = ['dash','products','sales','report'];
+  const tabs = ['dash','products','sales','report','gems'];
   const idx = tabs.indexOf(t);
   document.querySelectorAll('.tab')[idx].classList.add('active');
   document.getElementById('page-' + t).classList.add('active');
@@ -594,6 +713,188 @@ function openDetail(sku) {
 
 function closeDetail() {
   document.getElementById('detail-modal').classList.remove('open');
+}
+
+// ─── Gems ───
+function renderGemStats() {
+  const totalStock = gems.reduce((s,g) => s + g.stock, 0);
+  const ready = gems.filter(g => g.status === 'พร้อมขาย').length;
+  const out   = gems.filter(g => g.status === 'หมดสต็อก').length;
+  document.getElementById('gs-total').textContent = gems.length;
+  document.getElementById('gs-stock').textContent = totalStock;
+  document.getElementById('gs-ready').textContent = ready;
+  document.getElementById('gs-out').textContent   = out;
+}
+
+function renderGems() {
+  const q = (document.getElementById('gem-search').value || '').toLowerCase();
+  const st = document.getElementById('gem-filter-status').value;
+  let list = gems.filter(g => {
+    if (q && !g.gemType.toLowerCase().includes(q) && !g.code.toLowerCase().includes(q)) return false;
+    if (st && g.status !== st) return false;
+    return true;
+  });
+  const el = document.getElementById('gems-container');
+  if (!list.length) { el.innerHTML = '<div class="empty"><div class="ic">💎</div>ไม่พบข้อมูลพลอย</div>'; return; }
+  el.innerHTML = '<div class="tw"><table><thead><tr>' +
+    '<th>รหัส</th><th>ชนิดพลอย</th><th>น้ำหนัก(ct)</th><th>ลักษณะ</th><th>ขนาด</th><th>ราคา/ct</th><th>สต็อก(pcs)</th><th>สถานะ</th><th>จัดการ</th>' +
+    '</tr></thead><tbody>' +
+    list.map(g => `<tr class="clickable" onclick="openGemDetail('${g.code}')">
+      <td><strong style="font-family:monospace">${g.code}</strong></td>
+      <td>${g.gemType}</td>
+      <td>${g.weight}</td>
+      <td>${g.shape}</td>
+      <td>${g.size !== '-' ? g.size : '—'}</td>
+      <td>${g.pricePerCt ? '฿'+g.pricePerCt.toLocaleString('th-TH') : '—'}</td>
+      <td class="${g.stock===0?'b-low':''}">${g.stock}</td>
+      <td><span class="badge ${g.stock===0?'b-out':'b-ready'}">${g.status}</span></td>
+      <td onclick="event.stopPropagation()">
+        <div class="row">
+          <button onclick="openEditGem('${g.code}')" class="btn bo sm">✏️</button>
+          <button onclick="openRestock('${g.code}')" class="btn bg sm">📦</button>
+        </div>
+      </td>
+    </tr>`).join('') + '</tbody></table></div>';
+}
+
+function openAddGem() {
+  _editGemCode = null;
+  document.getElementById('gem-modal-title').textContent = '➕ เพิ่มพลอยใหม่';
+  document.getElementById('gm-type').value  = '';
+  document.getElementById('gm-weight').value = '';
+  document.getElementById('gm-stock').value  = '';
+  document.getElementById('gm-shape').value  = '';
+  document.getElementById('gm-price').value  = '';
+  document.getElementById('gm-size').value   = '';
+  document.getElementById('gm-notes').value  = '';
+  document.getElementById('gem-modal').classList.add('open');
+  document.getElementById('gm-type').focus();
+}
+
+function openEditGem(code) {
+  const g = gems.find(x => x.code === code);
+  if (!g) return;
+  _editGemCode = code;
+  document.getElementById('gem-modal-title').textContent = '✏️ แก้ไข ' + code;
+  document.getElementById('gm-type').value   = g.gemType;
+  document.getElementById('gm-weight').value = g.weight;
+  document.getElementById('gm-stock').value  = g.stock;
+  document.getElementById('gm-shape').value  = g.shape;
+  document.getElementById('gm-price').value  = g.pricePerCt;
+  document.getElementById('gm-size').value   = g.size !== '-' ? g.size : '';
+  document.getElementById('gm-notes').value  = g.notes !== '-' ? g.notes : '';
+  document.getElementById('gem-modal').classList.add('open');
+  document.getElementById('gem-detail-modal').classList.remove('open');
+}
+
+function closeGemModal() {
+  document.getElementById('gem-modal').classList.remove('open');
+}
+
+async function saveGem() {
+  const gemType = document.getElementById('gm-type').value.trim();
+  const weight  = parseFloat(document.getElementById('gm-weight').value) || 0;
+  const stock   = parseInt(document.getElementById('gm-stock').value) || 0;
+  const shape   = document.getElementById('gm-shape').value;
+  if (!gemType || !shape || weight <= 0) {
+    showToast('กรุณากรอก ชนิดพลอย / น้ำหนัก / ลักษณะ ให้ครบค่ะ', 'error'); return;
+  }
+  const btn = document.getElementById('gem-save-btn');
+  btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก…';
+  try {
+    if (_editGemCode) {
+      const g = gems.find(x => x.code === _editGemCode);
+      Object.assign(g, {
+        gemType, weight, shape, stock,
+        pricePerCt: parseFloat(document.getElementById('gm-price').value) || 0,
+        size:  document.getElementById('gm-size').value.trim()  || '-',
+        notes: document.getElementById('gm-notes').value.trim() || '-',
+        status: stock > 0 ? 'พร้อมขาย' : 'หมดสต็อก'
+      });
+      await sheetsUpdateGem(g);
+      showToast(`✅ แก้ไข ${_editGemCode} เรียบร้อยค่ะ`);
+    } else {
+      const code = await generateGemCode();
+      const newGem = {
+        id: generateId(), code, gemType, weight, shape, stock,
+        pricePerCt: parseFloat(document.getElementById('gm-price').value) || 0,
+        size:  document.getElementById('gm-size').value.trim()  || '-',
+        notes: document.getElementById('gm-notes').value.trim() || '-',
+        status: stock > 0 ? 'พร้อมขาย' : 'หมดสต็อก',
+        createdAt: todayISO()
+      };
+      await sheetsAddGem(newGem);
+      gems.push(newGem);
+      showToast(`✅ เพิ่ม ${code} เรียบร้อยค่ะ`);
+    }
+    closeGemModal();
+    renderGemStats(); renderGems();
+  } catch (e) {
+    showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '💎 บันทึก';
+  }
+}
+
+function openGemDetail(code) {
+  const g = gems.find(x => x.code === code);
+  if (!g) return;
+  document.getElementById('gdm-code').textContent = g.code;
+  document.getElementById('gdm-type').textContent = g.gemType;
+  document.getElementById('gdm-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div class="dm-row"><span class="lbl">น้ำหนัก</span><span class="val">${g.weight} ct</span></div>
+      <div class="dm-row"><span class="lbl">ลักษณะ</span><span class="val">${g.shape}</span></div>
+      <div class="dm-row"><span class="lbl">ขนาด</span><span class="val">${g.size !== '-' ? g.size + ' mm' : '—'}</span></div>
+      <div class="dm-row"><span class="lbl">ราคา/กะรัต</span><span class="val" style="color:var(--gold)">${g.pricePerCt ? '฿'+g.pricePerCt.toLocaleString('th-TH') : '—'}</span></div>
+    </div>
+    <div style="background:var(--s2);border-radius:8px;padding:14px;text-align:center;margin-bottom:12px">
+      <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">สต็อกคงเหลือ</div>
+      <div style="font-size:28px;font-weight:800;color:${g.stock===0?'var(--red)':'var(--gold)'}">${g.stock}</div>
+      <div style="font-size:12px;color:var(--muted)">เม็ด (pcs)</div>
+      <span class="badge ${g.stock===0?'b-out':'b-ready'}" style="margin-top:8px;display:inline-block">${g.status}</span>
+    </div>
+    ${g.notes && g.notes !== '-' ? `<div class="dm-row"><span class="lbl">หมายเหตุ</span><span class="val" style="color:var(--muted);font-size:13px">${g.notes}</span></div>` : ''}
+  `;
+  document.getElementById('gdm-actions').innerHTML = `
+    <button onclick="openEditGem('${g.code}')" class="btn bo">✏️ แก้ไข</button>
+    <button onclick="closeGemDetail();openRestock('${g.code}')" class="btn bg">📦 ปรับสต็อก</button>
+  `;
+  document.getElementById('gem-detail-modal').classList.add('open');
+}
+
+function closeGemDetail() {
+  document.getElementById('gem-detail-modal').classList.remove('open');
+}
+
+function openRestock(code) {
+  const g = gems.find(x => x.code === code);
+  if (!g) return;
+  _restockCode = code;
+  document.getElementById('restock-info').textContent = `${code} — ${g.gemType} (สต็อกปัจจุบัน: ${g.stock} pcs)`;
+  document.getElementById('restock-val').value = g.stock;
+  document.getElementById('restock-modal').classList.add('open');
+  document.getElementById('restock-val').focus();
+}
+
+function closeRestock() {
+  document.getElementById('restock-modal').classList.remove('open');
+}
+
+async function confirmRestock() {
+  const newStock = parseInt(document.getElementById('restock-val').value) || 0;
+  if (newStock < 0) { showToast('สต็อกต้อง ≥ 0', 'error'); return; }
+  try {
+    await sheetsUpdateGemStock(_restockCode, newStock);
+    const g = gems.find(x => x.code === _restockCode);
+    g.stock = newStock;
+    g.status = newStock > 0 ? 'พร้อมขาย' : 'หมดสต็อก';
+    closeRestock();
+    renderGemStats(); renderGems();
+    showToast(`✅ อัปเดตสต็อก ${_restockCode} → ${newStock} pcs`);
+  } catch (e) {
+    showToast('อัปเดตไม่สำเร็จ: ' + e.message, 'error');
+  }
 }
 
 // ─── Toast ───

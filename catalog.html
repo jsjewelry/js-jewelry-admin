@@ -245,6 +245,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   padding: 4px 10px; border-radius: 6px;
   background: rgba(92,186,125,0.12); color: #2d7a50;
 }
+.modal-video-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 12px; padding: 12px; border-radius: 10px;
+  background: #c0271e; color: #fff; font-weight: 700; font-size: 14px;
+  text-decoration: none; transition: background var(--ease);
+}
+.modal-video-btn:hover { background: #e03127; }
 
 /* ── Scroll to Top ── */
 .to-top {
@@ -337,6 +344,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
         </div>
         <span class="modal-status-badge">✓ พร้อมขาย</span>
       </div>
+      <div id="js-modal-video"></div>
     </div>
   </div>
 </div>
@@ -359,10 +367,10 @@ const CONFIG = {
   // A=id(0) B=sku(1) C=name(2) D=category(3) E=material(4) F=weight(5)
   // G=gemType(6) H=gemWeight(7) I=costPrice(8) J=sellPrice(9) K=stock(10)
   // L=status(11) M=imageUrl(12) N=notes(13) O=createdAt(14) P=size(15)
-  col: { sku:1, name:2, category:3, material:4, weight:5, gemType:6, gemWeight:7, sellPrice:9, size:15, notes:13, imageUrl:12, status:11 },
+  col: { sku:1, name:2, category:3, material:4, weight:5, gemType:6, gemWeight:7, sellPrice:9, size:15, notes:13, imageUrl:12, status:11, videoUrl:18 },
   // แท็บพลอย (Gems): id(0) code(1) gemType(2) weight-ct(3) shape(4) size(5) pricePerCt(6) stock(7) status(8) notes(9) createdAt(10) imageUrl(11)
   gemSheet: 'Gems',
-  gemCol: { code:1, gemType:2, weight:3, shape:4, size:5, pricePerCt:6, stock:7, status:8, notes:9, imageUrl:11 },
+  gemCol: { code:1, gemType:2, weight:3, shape:4, size:5, pricePerCt:6, stock:7, status:8, notes:9, imageUrl:11, pieces:13, videoUrl:14 },
 };
 
 /* ══════════════════════════════════════════════
@@ -412,6 +420,7 @@ async function fetchProducts() {
     notes:     row[c.notes]    || '',
     imageUrl:  row[c.imageUrl] || '',
     status:    row[c.status]   || '',
+    videoUrl:  row[c.videoUrl] || '',
   }));
   const g = CONFIG.gemCol;
   const gems = gemRows.map(row => {
@@ -432,6 +441,8 @@ async function fetchProducts() {
       notes:      row[g.notes]   || '',
       imageUrl:   row[g.imageUrl]|| '',
       status:     row[g.status]  || '',
+      pieces:     Number(row[g.pieces]) || 1,
+      videoUrl:   row[g.videoUrl] || '',
     };
   });
   return [...products, ...gems]
@@ -583,6 +594,7 @@ function openModal(sku) {
   if (p.gemType && p.gemType !== '-') rows.push(['อัญมณี', p.gemType]);
   if (p.gemWeight && p.gemWeight !== '-') rows.push(['น้ำหนัก', p.gemWeight + ' กะรัต']);
   if (p.shape && p.shape !== '-') rows.push(['รูปทรง', p.shape]);
+  if (p.pieces) rows.push(['จำนวนเม็ด', p.pieces + ' เม็ด']);
   if (p.size && p.size !== '-') rows.push(['ขนาด', p.size]);
   if (p.pricePerCt) rows.push(['ราคา/กะรัต', fmtPrice(p.pricePerCt)]);
   if (p.notes && p.notes !== '-') rows.push(['รายละเอียด', p.notes]);
@@ -591,6 +603,11 @@ function openModal(sku) {
       <span class="modal-lbl">${l}</span>
       <span class="modal-val">${v}</span>
     </div>`).join('');
+
+  const vurl = (p.videoUrl || '').trim();
+  document.getElementById('js-modal-video').innerHTML = vurl
+    ? `<a class="modal-video-btn" href="${vurl}" target="_blank" rel="noopener">▶ ดูวิดีโอ</a>`
+    : '';
 
   document.getElementById('js-modal').classList.add('open');
   document.body.style.overflow = 'hidden';

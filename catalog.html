@@ -350,7 +350,10 @@ const CONFIG = {
   sheetName: 'Products',
   // คอลัมน์ใน Sheet (0-based index)
   // A=0  B=1  C=2  D=3  E=4  F=5  G=6  H=7
-  col: { sku:0, name:1, category:2, material:3, sellPrice:4, notes:5, imageUrl:6, status:7 },
+  // A=id(0) B=sku(1) C=name(2) D=category(3) E=material(4) F=weight(5)
+  // G=gemType(6) H=gemWeight(7) I=costPrice(8) J=sellPrice(9) K=stock(10)
+  // L=status(11) M=imageUrl(12) N=notes(13) O=createdAt(14) P=size(15)
+  col: { sku:1, name:2, category:3, material:4, sellPrice:9, notes:13, imageUrl:12, status:11 },
 };
 
 /* ══════════════════════════════════════════════
@@ -393,7 +396,7 @@ async function fetchProducts() {
         status:    row[c.status]   || '',
       };
     })
-    .filter(p => p.sku && p.name && p.status === 'พร้อมขาย'); // แสดงเฉพาะพร้อมขาย
+    .filter(p => p.sku && p.name && p.status !== 'หมดสต็อก'); // ซ่อนเฉพาะหมดสต็อก
 }
 
 /* ══════════════════════════════════════════════

@@ -252,6 +252,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   text-decoration: none; transition: background var(--ease);
 }
 .modal-video-btn:hover { background: #e03127; }
+.modal-line-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 6px 0 14px; padding: 12px; border-radius: 10px;
+  background: #06C755; color: #fff; font-weight: 700; font-size: 14px;
+  text-decoration: none; transition: opacity var(--ease);
+}
+.modal-line-btn:hover { opacity: 0.9; }
 
 /* ── Scroll to Top ── */
 .to-top {
@@ -335,6 +342,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
       <div class="modal-cat"  id="js-modal-cat"></div>
       <div class="modal-name" id="js-modal-name"></div>
       <div class="modal-sku"  id="js-modal-sku"></div>
+      <div id="js-modal-line"></div>
       <div class="modal-divider"></div>
       <div id="js-modal-rows"></div>
       <div class="modal-price-wrap">
@@ -587,6 +595,10 @@ function openModal(sku) {
   document.getElementById('js-modal-name').textContent = p.name;
   document.getElementById('js-modal-sku').textContent  = 'รหัสสินค้า: ' + p.sku;
   document.getElementById('js-modal-price').textContent = fmtPrice(p.sellPrice);
+
+  const lineMsg = encodeURIComponent(`สนใจสินค้า ${p.sku} — ${p.name} (${fmtPrice(p.sellPrice)}) ค่ะ`);
+  document.getElementById('js-modal-line').innerHTML =
+    `<a class="modal-line-btn" href="https://line.me/R/oaMessage/%40888zbakd/?${lineMsg}" target="_blank" rel="noopener">💬 สอบถาม / สั่งซื้อทาง LINE</a>`;
 
   const rows = [];
   if (p.material) rows.push(['วัสดุ', p.material]);

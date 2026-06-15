@@ -155,7 +155,7 @@ const GCOL = { code:1, gemType:2, weight:3, pricePerCt:6, imageUrl:11 };
 
 let product = null;
 const qs = new URLSearchParams(location.search);
-const SKU = (qs.get('sku') || '').trim();
+const SKU = (qs.get('sku') || '').trim().toUpperCase();
 
 function parseCSVRow(row){
   const c=[];let cur='';let q=false;
@@ -180,8 +180,8 @@ async function init(){
   try{
     const [prod,gem]=await Promise.all([fetchSheet(CONFIG.productSheet),fetchSheet(CONFIG.gemSheet).catch(()=>[])]);
     let found=null;
-    for(const row of prod){ if((row[PCOL.sku]||'')===SKU){ found={sku:row[PCOL.sku],name:row[PCOL.name],category:row[PCOL.category],price:parseFloat(row[PCOL.sellPrice])||0,imageUrl:row[PCOL.imageUrl]||''}; break; } }
-    if(!found){ for(const row of gem){ if((row[GCOL.code]||'')===SKU){ const w=parseFloat(row[GCOL.weight])||0,ppc=parseFloat(row[GCOL.pricePerCt])||0; found={sku:row[GCOL.code],name:row[GCOL.gemType],category:'พลอย',price:Math.round(ppc*w),imageUrl:row[GCOL.imageUrl]||''}; break; } } }
+    for(const row of prod){ if((row[PCOL.sku]||'').trim().toUpperCase()===SKU){ found={sku:row[PCOL.sku],name:row[PCOL.name],category:row[PCOL.category],price:parseFloat(row[PCOL.sellPrice])||0,imageUrl:row[PCOL.imageUrl]||''}; break; } }
+    if(!found){ for(const row of gem){ if((row[GCOL.code]||'').trim().toUpperCase()===SKU){ const w=parseFloat(row[GCOL.weight])||0,ppc=parseFloat(row[GCOL.pricePerCt])||0; found={sku:row[GCOL.code],name:row[GCOL.gemType],category:'พลอย',price:Math.round(ppc*w),imageUrl:row[GCOL.imageUrl]||''}; break; } } }
     if(!found){ document.getElementById('loading').textContent='ไม่พบสินค้ารหัส '+SKU; return; }
     product=found;
     const u=imgUrl(found.imageUrl);

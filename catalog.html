@@ -360,6 +360,9 @@ const CONFIG = {
   // G=gemType(6) H=gemWeight(7) I=costPrice(8) J=sellPrice(9) K=stock(10)
   // L=status(11) M=imageUrl(12) N=notes(13) O=createdAt(14) P=size(15)
   col: { sku:1, name:2, category:3, material:4, weight:5, gemType:6, gemWeight:7, sellPrice:9, size:15, notes:13, imageUrl:12, status:11 },
+  // แท็บพลอย (Gems): id(0) code(1) gemType(2) weight-ct(3) shape(4) size(5) pricePerCt(6) stock(7) status(8) notes(9) createdAt(10) imageUrl(11)
+  gemSheet: 'Gems',
+  gemCol: { code:1, gemType:2, weight:3, shape:4, size:5, pricePerCt:6, stock:7, status:8, notes:9, imageUrl:11 },
 };
 
 /* ══════════════════════════════════════════════
@@ -382,30 +385,56 @@ function parseCSVRow(row) {
   return cells;
 }
 
-async function fetchProducts() {
-  const url = `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(CONFIG.sheetName)}`;
+async function fetchSheet(sheetName) {
+  const url = `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
   const r = await fetch(url);
   if (!r.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ: ' + r.status);
   const text = await r.text();
+  return text.trim().split('\n').slice(1).map(parseCSVRow);
+}
+
+async function fetchProducts() {
+  const [prodRows, gemRows] = await Promise.all([
+    fetchSheet(CONFIG.sheetName),
+    fetchSheet(CONFIG.gemSheet).catch(() => []),
+  ]);
   const c = CONFIG.col;
-  return text.trim().split('\n').slice(1)
-    .map(line => {
-      const row = parseCSVRow(line);
-      return {
-        sku:       row[c.sku]      || '',
-        name:      row[c.name]     || '',
-        category:  row[c.category] || '',
-        material:  row[c.material] || '',
-        weight:    row[c.weight]   || '',
-        gemType:   row[c.gemType]  || '',
-        gemWeight: row[c.gemWeight]|| '',
-        sellPrice: parseFloat(row[c.sellPrice]) || 0,
-        size:      row[c.size]     || '',
-        notes:     row[c.notes]    || '',
-        imageUrl:  row[c.imageUrl] || '',
-        status:    row[c.status]   || '',
-      };
-    })
+  const products = prodRows.map(row => ({
+    sku:       row[c.sku]      || '',
+    name:      row[c.name]     || '',
+    category:  row[c.category] || '',
+    material:  row[c.material] || '',
+    weight:    row[c.weight]   || '',
+    gemType:   row[c.gemType]  || '',
+    gemWeight: row[c.gemWeight]|| '',
+    sellPrice: parseFloat(row[c.sellPrice]) || 0,
+    size:      row[c.size]     || '',
+    notes:     row[c.notes]    || '',
+    imageUrl:  row[c.imageUrl] || '',
+    status:    row[c.status]   || '',
+  }));
+  const g = CONFIG.gemCol;
+  const gems = gemRows.map(row => {
+    const wt  = parseFloat(row[g.weight])     || 0;
+    const ppc = parseFloat(row[g.pricePerCt]) || 0;
+    return {
+      sku:        row[g.code]    || '',
+      name:       row[g.gemType] || '',
+      category:   'พลอย',
+      material:   '',
+      weight:     '',
+      gemType:    '',
+      gemWeight:  row[g.weight]  || '',
+      shape:      row[g.shape]   || '',
+      pricePerCt: ppc,
+      sellPrice:  Math.round(ppc * wt),
+      size:       row[g.size]    || '',
+      notes:      row[g.notes]   || '',
+      imageUrl:   row[g.imageUrl]|| '',
+      status:     row[g.status]  || '',
+    };
+  });
+  return [...products, ...gems]
     .filter(p => p.sku && p.name && p.status !== 'หมดสต็อก'); // ซ่อนเฉพาะหมดสต็อก
 }
 
@@ -477,7 +506,7 @@ function cardHTML(p) {
     <div class="card-body">
       <div class="card-sku">${p.sku}</div>
       <div class="card-name">${p.name}</div>
-      <div class="card-mat">${p.material || '—'}</div>
+      <div class="card-mat">${p.material || (p.gemWeight ? p.gemWeight + ' กะรัต' : '—')}</div>
       <div class="card-foot">
         <span class="card-price">${fmtPrice(p.sellPrice)}</span>
         <span class="card-status">✓ พร้อมขาย</span>
@@ -553,7 +582,9 @@ function openModal(sku) {
   if (p.weight && p.weight !== '-') rows.push(['น้ำหนัก', p.weight + ' กรัม']);
   if (p.gemType && p.gemType !== '-') rows.push(['อัญมณี', p.gemType]);
   if (p.gemWeight && p.gemWeight !== '-') rows.push(['น้ำหนัก', p.gemWeight + ' กะรัต']);
+  if (p.shape && p.shape !== '-') rows.push(['รูปทรง', p.shape]);
   if (p.size && p.size !== '-') rows.push(['ขนาด', p.size]);
+  if (p.pricePerCt) rows.push(['ราคา/กะรัต', fmtPrice(p.pricePerCt)]);
   if (p.notes && p.notes !== '-') rows.push(['รายละเอียด', p.notes]);
   document.getElementById('js-modal-rows').innerHTML = rows.map(([l,v]) => `
     <div class="modal-row">

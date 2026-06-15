@@ -402,6 +402,10 @@ tr.clickable{cursor:pointer}
         <label>หมายเหตุ</label>
         <input id="gm-notes" placeholder="รายละเอียดเพิ่มเติม">
       </div>
+      <div class="fg" style="grid-column:1/-1">
+        <label>🎬 URL วิดีโอ (YouTube)</label>
+        <input id="gm-video" placeholder="https://youtu.be/... (ถ้ามี)">
+      </div>
     </div>
     <div class="modal-act">
       <button class="btn bo" onclick="closeGemModal()">ยกเลิก</button>
@@ -877,6 +881,7 @@ function resetGemForm() {
   document.getElementById('gm-total').value   = '';
   document.getElementById('gm-origin').value  = '';
   document.getElementById('gm-notes').value   = '';
+  document.getElementById('gm-video').value   = '';
   document.getElementById('gm-image').value   = '';
   document.getElementById('gm-img-preview').style.display = 'none';
   document.getElementById('gm-img-current').textContent = '';
@@ -905,6 +910,7 @@ function openEditGem(code) {
   document.getElementById('gm-size').value   = g.size !== '-' ? g.size : '';
   document.getElementById('gm-notes').value  = g.notes !== '-' ? g.notes : '';
   document.getElementById('gm-origin').value = g.origin !== '-' ? g.origin : '';
+  document.getElementById('gm-video').value  = g.videoUrl || '';
   if (g.imageUrl) {
     document.getElementById('gm-img-current').textContent = '📷 มีรูปภาพอยู่แล้ว (อัปโหลดใหม่เพื่อเปลี่ยน)';
   }
@@ -981,6 +987,7 @@ async function saveGem() {
     const size   = document.getElementById('gm-size').value.trim()   || '-';
     const notes  = document.getElementById('gm-notes').value.trim()  || '-';
     const origin = document.getElementById('gm-origin').value.trim() || '-';
+    const videoUrl = document.getElementById('gm-video').value.trim();
 
     if (_editGemCode) {
       const g = gems.find(x => x.code === _editGemCode);
@@ -990,7 +997,7 @@ async function saveGem() {
         imageUrl = await uploadGemImage(imageFile, g.code);
       }
       Object.assign(g, {
-        gemType, weight, shape, stock, pieces, pricePerCt, size, notes, origin, imageUrl,
+        gemType, weight, shape, stock, pieces, pricePerCt, size, notes, origin, imageUrl, videoUrl,
         status: stock > 0 ? 'พร้อมขาย' : 'หมดสต็อก'
       });
       btn.textContent = '⏳ บันทึก…';
@@ -1005,7 +1012,7 @@ async function saveGem() {
       }
       const newGem = {
         id: generateId(), code, gemType, weight, shape, stock, pieces,
-        pricePerCt, size, notes, origin, imageUrl,
+        pricePerCt, size, notes, origin, imageUrl, videoUrl,
         status: stock > 0 ? 'พร้อมขาย' : 'หมดสต็อก',
         createdAt: todayISO()
       };

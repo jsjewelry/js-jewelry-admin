@@ -250,7 +250,7 @@ tr.clickable{cursor:pointer}
       </div>
       <div class="stats" id="gem-stats-row" style="margin-bottom:14px">
         <div class="stat"><div class="v" id="gs-total">—</div><div class="l">ชนิดพลอย (lot)</div></div>
-        <div class="stat"><div class="v" id="gs-stock">—</div><div class="l">สต็อกรวม (pcs)</div></div>
+        <div class="stat"><div class="v" id="gs-stock">—</div><div class="l">สต็อกรวม (ชุด)</div></div>
         <div class="stat"><div class="v" id="gs-ready">—</div><div class="l">lot พร้อมขาย</div></div>
         <div class="stat"><div class="v" id="gs-out">—</div><div class="l">lot หมดสต็อก</div></div>
       </div>
@@ -356,8 +356,8 @@ tr.clickable{cursor:pointer}
         <input type="number" id="gm-weight" step="0.01" min="0.01" placeholder="0.00" oninput="calcGemTotal()">
       </div>
       <div class="fg">
-        <label>จำนวนเม็ด (pcs) *</label>
-        <input type="number" id="gm-stock" min="0" placeholder="0">
+        <label>จำนวนเม็ด/ชุด (เม็ด) *</label>
+        <input type="number" id="gm-pieces" min="1" placeholder="1">
       </div>
       <div class="fg">
         <label>ลักษณะ (shape) *</label>
@@ -394,6 +394,10 @@ tr.clickable{cursor:pointer}
         <label>แหล่งกำเนิด (Origin)</label>
         <input id="gm-origin" placeholder="เช่น พม่า, ศรีลังกา, ไทย, โมซัมบิก…">
       </div>
+      <div class="fg">
+        <label>จำนวนสต็อค (ชุด) *</label>
+        <input type="number" id="gm-stockcount" min="0" placeholder="1">
+      </div>
       <div class="fg" style="grid-column:1/-1">
         <label>หมายเหตุ</label>
         <input id="gm-notes" placeholder="รายละเอียดเพิ่มเติม">
@@ -427,15 +431,22 @@ tr.clickable{cursor:pointer}
     <div class="modal-title">💰 ขายพลอย</div>
     <div id="sell-gem-info" style="color:var(--muted);font-size:13px;margin-bottom:14px"></div>
     <div class="fg">
-      <label>จำนวนที่ขาย (pcs)</label>
+      <label>ขายเป็น</label>
+      <select id="sell-gem-unit" onchange="onSellUnitChange()">
+        <option value="ชุด">ชุด (ลอต)</option>
+        <option value="เม็ด">เม็ด</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label id="sell-gem-qty-label">จำนวนที่ขาย (ชุด)</label>
       <input type="number" id="sell-gem-qty" min="1" value="1">
     </div>
     <div class="fg">
-      <label>ราคาขาย (฿) /เม็ด</label>
+      <label>ราคาขาย (฿) ต่อหน่วย</label>
       <input type="number" id="sell-gem-price" min="0" placeholder="0">
     </div>
     <div class="fg">
-      <label>ราคาทุน (฿) /เม็ด <span style="color:var(--muted);font-weight:400">— ใส่เพื่อคำนวณกำไร</span></label>
+      <label>ราคาทุน (฿) ต่อหน่วย <span style="color:var(--muted);font-weight:400">— ใส่เพื่อคำนวณกำไร</span></label>
       <input type="number" id="sell-gem-cost" min="0" placeholder="0">
     </div>
     <div class="modal-act">
@@ -826,7 +837,7 @@ function renderGems() {
   const el = document.getElementById('gems-container');
   if (!list.length) { el.innerHTML = '<div class="empty"><div class="ic">💎</div>ไม่พบข้อมูลพลอย</div>'; return; }
   el.innerHTML = '<div class="tw"><table><thead><tr>' +
-    '<th></th><th>รหัส</th><th>ชนิดพลอย</th><th>น้ำหนัก(ct)</th><th>ลักษณะ</th><th>ราคา/ct</th><th>ราคาสุทธิ</th><th>แหล่งกำเนิด</th><th>สต็อก(pcs)</th><th>สถานะ</th><th>จัดการ</th>' +
+    '<th></th><th>รหัส</th><th>ชนิดพลอย</th><th>น้ำหนัก(ct)</th><th>ลักษณะ</th><th>ราคา/ct</th><th>ราคาสุทธิ</th><th>แหล่งกำเนิด</th><th>เม็ด/ชุด</th><th>สต็อค(ชุด)</th><th>สถานะ</th><th>จัดการ</th>' +
     '</tr></thead><tbody>' +
     list.map(g => {
       const total = g.pricePerCt && g.weight ? g.pricePerCt * g.weight : 0;
@@ -841,6 +852,7 @@ function renderGems() {
         <td>${g.pricePerCt ? '฿'+g.pricePerCt.toLocaleString('th-TH') : '—'}</td>
         <td style="color:var(--gold);font-weight:700">${total ? '฿'+total.toLocaleString('th-TH',{maximumFractionDigits:0}) : '—'}</td>
         <td style="color:var(--muted)">${g.origin !== '-' ? g.origin : '—'}</td>
+        <td>${g.pieces || 1}</td>
         <td class="${g.stock===0?'b-low':''}">${g.stock}</td>
         <td><span class="badge ${g.stock===0?'b-out':'b-ready'}">${g.status}</span></td>
         <td onclick="event.stopPropagation()">
@@ -857,7 +869,8 @@ function renderGems() {
 function resetGemForm() {
   document.getElementById('gm-type').value    = '';
   document.getElementById('gm-weight').value  = '';
-  document.getElementById('gm-stock').value   = '';
+  document.getElementById('gm-pieces').value     = '';
+  document.getElementById('gm-stockcount').value = '';
   document.getElementById('gm-shape').value   = '';
   document.getElementById('gm-price').value   = '';
   document.getElementById('gm-size').value    = '';
@@ -885,7 +898,8 @@ function openEditGem(code) {
   document.getElementById('gem-modal-title').textContent = '✏️ แก้ไข ' + code;
   document.getElementById('gm-type').value   = g.gemType;
   document.getElementById('gm-weight').value = g.weight;
-  document.getElementById('gm-stock').value  = g.stock;
+  document.getElementById('gm-pieces').value     = g.pieces || 1;
+  document.getElementById('gm-stockcount').value = g.stock;
   document.getElementById('gm-shape').value  = g.shape;
   document.getElementById('gm-price').value  = g.pricePerCt;
   document.getElementById('gm-size').value   = g.size !== '-' ? g.size : '';
@@ -953,7 +967,8 @@ async function uploadGemImage(file, code) {
 async function saveGem() {
   const gemType = document.getElementById('gm-type').value.trim();
   const weight  = parseFloat(document.getElementById('gm-weight').value) || 0;
-  const stock   = parseInt(document.getElementById('gm-stock').value) || 0;
+  const pieces  = parseInt(document.getElementById('gm-pieces').value) || 1;
+  const stock   = parseInt(document.getElementById('gm-stockcount').value) || 0;
   const shape   = document.getElementById('gm-shape').value;
   if (!gemType || !shape || weight <= 0) {
     showToast('กรุณากรอก ชนิดพลอย / น้ำหนัก / ลักษณะ ให้ครบค่ะ', 'error'); return;
@@ -975,7 +990,7 @@ async function saveGem() {
         imageUrl = await uploadGemImage(imageFile, g.code);
       }
       Object.assign(g, {
-        gemType, weight, shape, stock, pricePerCt, size, notes, origin, imageUrl,
+        gemType, weight, shape, stock, pieces, pricePerCt, size, notes, origin, imageUrl,
         status: stock > 0 ? 'พร้อมขาย' : 'หมดสต็อก'
       });
       btn.textContent = '⏳ บันทึก…';
@@ -989,7 +1004,7 @@ async function saveGem() {
         imageUrl = await uploadGemImage(imageFile, code);
       }
       const newGem = {
-        id: generateId(), code, gemType, weight, shape, stock,
+        id: generateId(), code, gemType, weight, shape, stock, pieces,
         pricePerCt, size, notes, origin, imageUrl,
         status: stock > 0 ? 'พร้อมขาย' : 'หมดสต็อก',
         createdAt: todayISO()
@@ -1021,6 +1036,7 @@ function openGemDetail(code) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
       <div class="dm-row"><span class="lbl">น้ำหนัก</span><span class="val">${g.weight} ct</span></div>
       <div class="dm-row"><span class="lbl">ลักษณะ</span><span class="val">${g.shape}</span></div>
+      <div class="dm-row"><span class="lbl">เม็ด/ชุด</span><span class="val">${g.pieces || 1} เม็ด</span></div>
       <div class="dm-row"><span class="lbl">ขนาด</span><span class="val">${g.size !== '-' ? g.size + ' mm' : '—'}</span></div>
       <div class="dm-row"><span class="lbl">ราคา/กะรัต</span><span class="val" style="color:var(--gold)">${g.pricePerCt ? '฿'+g.pricePerCt.toLocaleString('th-TH') : '—'}</span></div>
       ${totalPrice ? `<div class="dm-row" style="grid-column:1/-1"><span class="lbl">ราคาสุทธิ (${g.weight} ct × ฿${g.pricePerCt.toLocaleString('th-TH')})</span><span class="val" style="color:var(--gold);font-size:18px;font-weight:800">฿${totalPrice.toLocaleString('th-TH')}</span></div>` : ''}
@@ -1029,7 +1045,7 @@ function openGemDetail(code) {
     <div style="background:var(--s2);border-radius:8px;padding:14px;text-align:center;margin-bottom:12px">
       <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">สต็อกคงเหลือ</div>
       <div style="font-size:28px;font-weight:800;color:${g.stock===0?'var(--red)':'var(--gold)'}">${g.stock}</div>
-      <div style="font-size:12px;color:var(--muted)">เม็ด (pcs)</div>
+      <div style="font-size:12px;color:var(--muted)">ชุด · ${g.pieces || 1} เม็ด/ชุด</div>
       <span class="badge ${g.stock===0?'b-out':'b-ready'}" style="margin-top:8px;display:inline-block">${g.status}</span>
     </div>
     ${g.notes && g.notes !== '-' ? `<div class="dm-row"><span class="lbl">หมายเหตุ</span><span class="val" style="color:var(--muted);font-size:13px">${g.notes}</span></div>` : ''}
@@ -1052,15 +1068,26 @@ function openSellGem(code) {
   if (!g) return;
   if (g.stock <= 0) { showToast('สต็อกหมดแล้วค่ะ', 'error'); return; }
   _restockCode = code;
+  const pieces = g.pieces || 1;
   document.getElementById('sell-gem-info').textContent =
-    `${code} — ${g.gemType} | สต็อก: ${g.stock} pcs | ราคา/ct: ${g.pricePerCt ? '฿'+g.pricePerCt.toLocaleString('th-TH') : '—'}`;
+    `${code} — ${g.gemType} | คงเหลือ ${g.stock} ชุด (${pieces} เม็ด/ชุด) | ราคา/ct: ${g.pricePerCt ? '฿'+g.pricePerCt.toLocaleString('th-TH') : '—'}`;
+  document.getElementById('sell-gem-unit').value = 'ชุด';
   document.getElementById('sell-gem-qty').value = 1;
-  document.getElementById('sell-gem-price').value = g.pricePerCt
-    ? (g.pricePerCt * g.weight).toFixed(0)
-    : '';
   document.getElementById('sell-gem-cost').value = '';
+  onSellUnitChange();
   document.getElementById('sell-gem-modal').classList.add('open');
   document.getElementById('sell-gem-qty').focus();
+}
+
+function onSellUnitChange() {
+  const g = gems.find(x => x.code === _restockCode);
+  if (!g) return;
+  const unit   = document.getElementById('sell-gem-unit').value;
+  const pieces = g.pieces || 1;
+  const stonePrice = (g.pricePerCt && g.weight) ? g.pricePerCt * g.weight : 0;
+  const def = unit === 'ชุด' ? stonePrice * pieces : stonePrice;
+  document.getElementById('sell-gem-price').value = def ? def.toFixed(0) : '';
+  document.getElementById('sell-gem-qty-label').textContent = 'จำนวนที่ขาย (' + unit + ')';
 }
 
 function closeSellGem() {
@@ -1068,20 +1095,34 @@ function closeSellGem() {
 }
 
 async function confirmSellGem() {
+  const unit  = document.getElementById('sell-gem-unit').value;
   const qty   = parseInt(document.getElementById('sell-gem-qty').value)   || 0;
   const price = parseFloat(document.getElementById('sell-gem-price').value) || 0;
   const cost  = parseFloat(document.getElementById('sell-gem-cost').value)  || 0;
   const g = gems.find(x => x.code === _restockCode);
   if (!g) return;
   if (qty <= 0) { showToast('จำนวนต้องมากกว่า 0', 'error'); return; }
-  if (qty > g.stock) { showToast(`สต็อกไม่พอ (เหลือ ${g.stock} pcs)`, 'error'); return; }
+
+  const pieces = g.pieces || 1;
+  let lots;
+  if (unit === 'ชุด') {
+    lots = qty;
+  } else {
+    if (qty % pieces !== 0) {
+      showToast(`ขายเป็นเม็ดต้องเป็นจำนวนเท่าของ ${pieces} เม็ด/ชุด (หรือเลือกขายเป็นชุด)`, 'error');
+      return;
+    }
+    lots = qty / pieces;
+  }
+  if (lots > g.stock) { showToast(`สต็อกไม่พอ (เหลือ ${g.stock} ชุด)`, 'error'); return; }
+
   try {
     // 1) บันทึกการขายพลอยลงชีต Sales (รวมรายงานเดียวกับสินค้า)
     const sale = {
       id: generateId(),
       date: todayISO(),
       sku: g.code,
-      productName: `${g.gemType}${g.weight ? ' ' + g.weight + ' ct' : ''} (พลอย)`,
+      productName: `${g.gemType}${g.weight ? ' ' + g.weight + ' ct' : ''} (พลอย/${unit})`,
       qty,
       sellPrice: price,
       costPrice: cost,
@@ -1089,15 +1130,15 @@ async function confirmSellGem() {
     };
     await sheetsAddSale(sale);
     sales.push(sale);
-    // 2) ลดสต็อกพลอย
-    const newStock = g.stock - qty;
+    // 2) ลดสต็อกพลอย (หน่วยชุด)
+    const newStock = g.stock - lots;
     await sheetsUpdateGemStock(g.code, newStock);
     g.stock  = newStock;
     g.status = newStock > 0 ? 'พร้อมขาย' : 'หมดสต็อก';
     closeSellGem();
     renderGemStats(); renderGems();
     renderDash(); renderSales(); renderReport();
-    showToast(`✅ ขาย ${g.code} ${qty} pcs ฿${price.toLocaleString('th-TH')} — บันทึกในรายงานแล้ว`);
+    showToast(`✅ ขาย ${g.code} ${qty} ${unit} — บันทึกในรายงานแล้ว (เหลือ ${newStock} ชุด)`);
   } catch (e) {
     showToast('บันทึกไม่สำเร็จ: ' + e.message, 'error');
   }

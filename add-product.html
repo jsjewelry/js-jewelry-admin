@@ -144,6 +144,10 @@ input.sku-badge.sku-error{border-color:var(--red);color:var(--red)}
             <label>หรือใส่ URL รูป</label>
             <input type="url" id="p-imgurl" placeholder="https://..." oninput="previewUrl(this.value)">
           </div>
+          <div class="fg" style="margin-top:8px">
+            <label>🎬 URL วิดีโอ (YouTube)</label>
+            <input type="url" id="p-video" placeholder="https://youtu.be/... (ถ้ามี)">
+          </div>
         </div>
 
         <!-- Right: Fields -->
@@ -246,6 +250,7 @@ async function loadEditProduct() {
     document.getElementById('p-imgurl').value = editProduct.imageUrl;
     previewUrl(editProduct.imageUrl);
   }
+  document.getElementById('p-video').value = editProduct.videoUrl || '';
   updateStatusPreview();
 }
 
@@ -376,7 +381,10 @@ async function saveProduct() {
       status: stock > 0 ? 'พร้อมขาย' : 'หมดสต็อก',
       imageUrl,
       notes: document.getElementById('p-notes').value.trim() || '-',
-      createdAt: editProduct ? editProduct.createdAt : new Date().toISOString()
+      createdAt: editProduct ? editProduct.createdAt : new Date().toISOString(),
+      videoUrl: document.getElementById('p-video').value.trim(),
+      highlight: editProduct ? editProduct.highlight : '',
+      postStatus: editProduct ? editProduct.postStatus : ''
     };
 
     if (editSku) {

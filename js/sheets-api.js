@@ -12,7 +12,7 @@
 
 const PRODUCTS_RANGE = `${CONFIG.PRODUCTS_SHEET}!A:P`;
 const SALES_RANGE    = `${CONFIG.SALES_SHEET}!A:H`;
-const GEMS_RANGE     = `${CONFIG.GEMS_SHEET}!A:M`;
+const GEMS_RANGE     = `${CONFIG.GEMS_SHEET}!A:N`;
 
 // ─── PRODUCTS ──────────────────────────────────────────────
 
@@ -202,10 +202,10 @@ async function ensureSalesHeader() {
 }
 
 // ─── GEMS ──────────────────────────────────────────────────
-//  Gems Sheet columns (A-M):
+//  Gems Sheet columns (A-N):
 //  A:id  B:code  C:gemType  D:weight(ct)  E:shape
-//  F:size(mm)  G:pricePerCt  H:stock  I:status  J:notes
-//  K:createdAt  L:imageUrl  M:origin
+//  F:size(mm)  G:pricePerCt  H:stock(ชุด)  I:status  J:notes
+//  K:createdAt  L:imageUrl  M:origin  N:pieces(เม็ด/ชุด)
 
 async function sheetsGetAllGems() {
   await ensureGemsHeader();
@@ -232,7 +232,8 @@ function rowToGem(r) {
     notes:      r[9]  || '-',
     createdAt:  r[10] || '',
     imageUrl:   r[11] || '',
-    origin:     r[12] || '-'
+    origin:     r[12] || '-',
+    pieces:     Number(r[13] || 1)
   };
 }
 
@@ -241,7 +242,8 @@ function gemToRow(g) {
     g.id, g.code, g.gemType, g.weight, g.shape,
     g.size || '-', g.pricePerCt, g.stock, g.status,
     g.notes || '-', g.createdAt,
-    g.imageUrl || '', g.origin || '-'
+    g.imageUrl || '', g.origin || '-',
+    (g.pieces != null ? g.pieces : 1)
   ];
 }
 
@@ -259,7 +261,7 @@ async function sheetsAddGem(gem) {
 async function sheetsUpdateGem(gem) {
   const rowNum = await findGemRow(gem.code);
   if (!rowNum) throw new Error(`ไม่พบรหัส: ${gem.code}`);
-  const range = `${CONFIG.GEMS_SHEET}!A${rowNum}:M${rowNum}`;
+  const range = `${CONFIG.GEMS_SHEET}!A${rowNum}:N${rowNum}`;
   await gapi.client.sheets.spreadsheets.values.update({
     spreadsheetId: CONFIG.SHEET_ID,
     range,
@@ -298,7 +300,7 @@ async function ensureGemsHeader() {
   try {
     const resp = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: CONFIG.SHEET_ID,
-      range: `${CONFIG.GEMS_SHEET}!A1:M1`
+      range: `${CONFIG.GEMS_SHEET}!A1:N1`
     });
     if (!resp.result.values || resp.result.values.length === 0) {
       needHeader = true;
@@ -318,10 +320,10 @@ async function ensureGemsHeader() {
   if (needHeader) {
     await gapi.client.sheets.spreadsheets.values.update({
       spreadsheetId: CONFIG.SHEET_ID,
-      range: `${CONFIG.GEMS_SHEET}!A1:M1`,
+      range: `${CONFIG.GEMS_SHEET}!A1:N1`,
       valueInputOption: 'RAW',
       resource: {
-        values: [['id','code','gemType','weight','shape','size','pricePerCt','stock','status','notes','createdAt','imageUrl','origin']]
+        values: [['id','code','gemType','weight','shape','size','pricePerCt','stock','status','notes','createdAt','imageUrl','origin','pieces']]
       }
     });
   }

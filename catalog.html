@@ -353,7 +353,7 @@ const CONFIG = {
   // A=id(0) B=sku(1) C=name(2) D=category(3) E=material(4) F=weight(5)
   // G=gemType(6) H=gemWeight(7) I=costPrice(8) J=sellPrice(9) K=stock(10)
   // L=status(11) M=imageUrl(12) N=notes(13) O=createdAt(14) P=size(15)
-  col: { sku:1, name:2, category:3, material:4, sellPrice:9, notes:13, imageUrl:12, status:11 },
+  col: { sku:1, name:2, category:3, material:4, weight:5, gemType:6, gemWeight:7, sellPrice:9, size:15, notes:13, imageUrl:12, status:11 },
 };
 
 /* ══════════════════════════════════════════════
@@ -390,7 +390,11 @@ async function fetchProducts() {
         name:      row[c.name]     || '',
         category:  row[c.category] || '',
         material:  row[c.material] || '',
+        weight:    row[c.weight]   || '',
+        gemType:   row[c.gemType]  || '',
+        gemWeight: row[c.gemWeight]|| '',
         sellPrice: parseFloat(row[c.sellPrice]) || 0,
+        size:      row[c.size]     || '',
         notes:     row[c.notes]    || '',
         imageUrl:  row[c.imageUrl] || '',
         status:    row[c.status]   || '',
@@ -539,7 +543,17 @@ function openModal(sku) {
   document.getElementById('js-modal-price').textContent = fmtPrice(p.sellPrice);
 
   const rows = [];
-  if (p.material) rows.push(['วัสดุ', p.material]);
+  if (p.material) {
+    let v = p.material;
+    if (p.weight && p.weight !== '-') v += `  /  น้ำหนัก ${p.weight} กรัม`;
+    rows.push(['วัสดุ', v]);
+  }
+  if (p.gemType && p.gemType !== '-') {
+    let v = p.gemType;
+    if (p.gemWeight && p.gemWeight !== '-') v += `  /  น้ำหนัก ${p.gemWeight} กะรัต`;
+    rows.push(['อัญมณี', v]);
+  }
+  if (p.size && p.size !== '-') rows.push(['ขนาด', p.size]);
   if (p.notes && p.notes !== '-') rows.push(['รายละเอียด', p.notes]);
   document.getElementById('js-modal-rows').innerHTML = rows.map(([l,v]) => `
     <div class="modal-row">

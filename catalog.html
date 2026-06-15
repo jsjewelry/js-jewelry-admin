@@ -596,7 +596,7 @@ function openModal(sku) {
   document.getElementById('js-modal-sku').textContent  = 'รหัสสินค้า: ' + p.sku;
   document.getElementById('js-modal-price').textContent = fmtPrice(p.sellPrice);
 
-  const lineMsg = encodeURIComponent(`สนใจสินค้า ${p.sku} — ${p.name} (${fmtPrice(p.sellPrice)}) ค่ะ`);
+  const lineMsg = encodeURIComponent(`สนใจสินค้า ${p.sku}`);
   document.getElementById('js-modal-line').innerHTML =
     `<a class="modal-line-btn" href="https://line.me/R/oaMessage/%40888zbakd/?${lineMsg}" target="_blank" rel="noopener">💬 สอบถาม / สั่งซื้อทาง LINE</a>`;
 

@@ -10,9 +10,9 @@
 //  F:sellPrice  G:costPrice  H:profit
 // ============================================================
 
-const PRODUCTS_RANGE = `${CONFIG.PRODUCTS_SHEET}!A:P`;
+const PRODUCTS_RANGE = `${CONFIG.PRODUCTS_SHEET}!A:S`;
 const SALES_RANGE    = `${CONFIG.SALES_SHEET}!A:H`;
-const GEMS_RANGE     = `${CONFIG.GEMS_SHEET}!A:N`;
+const GEMS_RANGE     = `${CONFIG.GEMS_SHEET}!A:O`;
 
 // ─── PRODUCTS ──────────────────────────────────────────────
 
@@ -43,7 +43,10 @@ function rowToProduct(r) {
     imageUrl:   r[12] || '',
     notes:      r[13] || '-',
     createdAt:  r[14] || '',
-    size:       r[15] || ''
+    size:       r[15] || '',
+    highlight:  r[16] || '',
+    postStatus: r[17] || '',
+    videoUrl:   r[18] || ''
   };
 }
 
@@ -52,7 +55,7 @@ function productToRow(p) {
     p.id, p.sku, p.name, p.category, p.material, p.weight,
     p.gemType, p.gemWeight, p.costPrice, p.sellPrice,
     p.stock, p.status, p.imageUrl, p.notes, p.createdAt,
-    p.size || ''
+    p.size || '', p.highlight || '', p.postStatus || '', p.videoUrl || ''
   ];
 }
 
@@ -75,7 +78,7 @@ async function sheetsAddProduct(product) {
 async function sheetsUpdateProduct(product) {
   const rowNum = await findProductRow(product.sku);
   if (!rowNum) throw new Error(`ไม่พบ SKU: ${product.sku}`);
-  const range = `${CONFIG.PRODUCTS_SHEET}!A${rowNum}:P${rowNum}`;
+  const range = `${CONFIG.PRODUCTS_SHEET}!A${rowNum}:S${rowNum}`;
   await gapi.client.sheets.spreadsheets.values.update({
     spreadsheetId: CONFIG.SHEET_ID,
     range,
@@ -131,13 +134,14 @@ async function ensureProductsHeader() {
   if (!resp.result.values || resp.result.values.length === 0) {
     await gapi.client.sheets.spreadsheets.values.update({
       spreadsheetId: CONFIG.SHEET_ID,
-      range: `${CONFIG.PRODUCTS_SHEET}!A1:P1`,
+      range: `${CONFIG.PRODUCTS_SHEET}!A1:S1`,
       valueInputOption: 'RAW',
       resource: {
         values: [[
           'id','sku','name','category','material','weight',
           'gemType','gemWeight','costPrice','sellPrice',
-          'stock','status','imageUrl','notes','createdAt','size'
+          'stock','status','imageUrl','notes','createdAt','size',
+          'highlight','postStatus','videoUrl'
         ]]
       }
     });
@@ -205,7 +209,7 @@ async function ensureSalesHeader() {
 //  Gems Sheet columns (A-N):
 //  A:id  B:code  C:gemType  D:weight(ct)  E:shape
 //  F:size(mm)  G:pricePerCt  H:stock(ชุด)  I:status  J:notes
-//  K:createdAt  L:imageUrl  M:origin  N:pieces(เม็ด/ชุด)
+//  K:createdAt  L:imageUrl  M:origin  N:pieces(เม็ด/ชุด)  O:videoUrl
 
 async function sheetsGetAllGems() {
   await ensureGemsHeader();
@@ -233,7 +237,8 @@ function rowToGem(r) {
     createdAt:  r[10] || '',
     imageUrl:   r[11] || '',
     origin:     r[12] || '-',
-    pieces:     Number(r[13] || 1)
+    pieces:     Number(r[13] || 1),
+    videoUrl:   r[14] || ''
   };
 }
 
@@ -243,7 +248,7 @@ function gemToRow(g) {
     g.size || '-', g.pricePerCt, g.stock, g.status,
     g.notes || '-', g.createdAt,
     g.imageUrl || '', g.origin || '-',
-    (g.pieces != null ? g.pieces : 1)
+    (g.pieces != null ? g.pieces : 1), g.videoUrl || ''
   ];
 }
 
@@ -261,7 +266,7 @@ async function sheetsAddGem(gem) {
 async function sheetsUpdateGem(gem) {
   const rowNum = await findGemRow(gem.code);
   if (!rowNum) throw new Error(`ไม่พบรหัส: ${gem.code}`);
-  const range = `${CONFIG.GEMS_SHEET}!A${rowNum}:N${rowNum}`;
+  const range = `${CONFIG.GEMS_SHEET}!A${rowNum}:O${rowNum}`;
   await gapi.client.sheets.spreadsheets.values.update({
     spreadsheetId: CONFIG.SHEET_ID,
     range,
@@ -300,7 +305,7 @@ async function ensureGemsHeader() {
   try {
     const resp = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: CONFIG.SHEET_ID,
-      range: `${CONFIG.GEMS_SHEET}!A1:N1`
+      range: `${CONFIG.GEMS_SHEET}!A1:O1`
     });
     if (!resp.result.values || resp.result.values.length === 0) {
       needHeader = true;
@@ -320,10 +325,10 @@ async function ensureGemsHeader() {
   if (needHeader) {
     await gapi.client.sheets.spreadsheets.values.update({
       spreadsheetId: CONFIG.SHEET_ID,
-      range: `${CONFIG.GEMS_SHEET}!A1:N1`,
+      range: `${CONFIG.GEMS_SHEET}!A1:O1`,
       valueInputOption: 'RAW',
       resource: {
-        values: [['id','code','gemType','weight','shape','size','pricePerCt','stock','status','notes','createdAt','imageUrl','origin','pieces']]
+        values: [['id','code','gemType','weight','shape','size','pricePerCt','stock','status','notes','createdAt','imageUrl','origin','pieces','videoUrl']]
       }
     });
   }

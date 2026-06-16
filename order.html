@@ -169,8 +169,8 @@ const CONFIG = {
   webhookUrl: 'https://hook.us2.make.com/p5c1up46p35plsqkyqpeeu6mbfwkhanv'
 };
 // คอลัมน์ (0-based)
-const PCOL = { sku:1, name:2, category:3, sellPrice:9, imageUrl:12 };
-const GCOL = { code:1, gemType:2, weight:3, pricePerCt:6, imageUrl:11 };
+const PCOL = { sku:1, name:2, category:3, sellPrice:9, imageUrl:12, promoPrice:19 };
+const GCOL = { code:1, gemType:2, weight:3, pricePerCt:6, imageUrl:11, promoPrice:15 };
 const ACCOUNT_NO = '2832183558';
 
 let product = null;
@@ -200,8 +200,15 @@ function certCost(){ return parseInt(document.getElementById('f-cert').value)||0
 function certLabel(){ const s=document.getElementById('f-cert'); return certCost()>0 ? s.options[s.selectedIndex].text : '-'; }
 function updatePrice(){
   if(!product) return;
-  const total=product.price+certCost();
-  document.getElementById('p-price').textContent = fmt(total) + (certCost()>0 ? ' (รวมใบเซอร์)' : '');
+  const cc=certCost();
+  const total=product.price+cc;
+  const suffix = cc>0 ? ' (รวมใบเซอร์)' : '';
+  const el=document.getElementById('p-price');
+  if(product.promoPrice>0){
+    el.innerHTML = `<span style="text-decoration:line-through;color:#aaa;font-weight:500;font-size:14px;margin-right:8px">${fmt(product.fullPrice+cc)}</span><span style="color:#c0271e">${fmt(total)}</span>${suffix}`;
+  } else {
+    el.textContent = fmt(total) + suffix;
+  }
 }
 
 async function init(){
@@ -209,8 +216,8 @@ async function init(){
   try{
     const [prod,gem]=await Promise.all([fetchSheet(CONFIG.productSheet),fetchSheet(CONFIG.gemSheet).catch(()=>[])]);
     let found=null;
-    for(const row of prod){ if((row[PCOL.sku]||'').trim().toUpperCase()===SKU){ found={sku:row[PCOL.sku],name:row[PCOL.name],category:row[PCOL.category],price:parseFloat(row[PCOL.sellPrice])||0,imageUrl:row[PCOL.imageUrl]||''}; break; } }
-    if(!found){ for(const row of gem){ if((row[GCOL.code]||'').trim().toUpperCase()===SKU){ const w=parseFloat(row[GCOL.weight])||0,ppc=parseFloat(row[GCOL.pricePerCt])||0; found={sku:row[GCOL.code],name:row[GCOL.gemType],category:'พลอย',price:Math.round(ppc*w),imageUrl:row[GCOL.imageUrl]||''}; break; } } }
+    for(const row of prod){ if((row[PCOL.sku]||'').trim().toUpperCase()===SKU){ const sp=parseFloat(row[PCOL.sellPrice])||0,pp=parseFloat(row[PCOL.promoPrice])||0,hasP=(pp>0&&pp<sp); found={sku:row[PCOL.sku],name:row[PCOL.name],category:row[PCOL.category],price:hasP?pp:sp,fullPrice:sp,promoPrice:hasP?pp:0,imageUrl:row[PCOL.imageUrl]||''}; break; } }
+    if(!found){ for(const row of gem){ if((row[GCOL.code]||'').trim().toUpperCase()===SKU){ const w=parseFloat(row[GCOL.weight])||0,ppc=parseFloat(row[GCOL.pricePerCt])||0,net=Math.round(ppc*w),pp=parseFloat(row[GCOL.promoPrice])||0,hasP=(pp>0&&pp<net); found={sku:row[GCOL.code],name:row[GCOL.gemType],category:'พลอย',price:hasP?pp:net,fullPrice:net,promoPrice:hasP?pp:0,imageUrl:row[GCOL.imageUrl]||''}; break; } } }
     if(!found){ document.getElementById('loading').textContent='ไม่พบสินค้ารหัส '+SKU; return; }
     product=found;
     const u=imgUrl(found.imageUrl);
@@ -267,6 +274,8 @@ document.getElementById('order-form').addEventListener('submit',async e=>{
     datetime:new Date().toISOString(),
     sku:product.sku, productName:product.name, category:product.category,
     price:total,
+    fullPrice:product.fullPrice+cost,
+    promoApplied:product.promoPrice>0,
     imageUrl:imgUrl(product.imageUrl),
     customerName:document.getElementById('f-name').value.trim(),
     phone:document.getElementById('f-phone').value.trim(),

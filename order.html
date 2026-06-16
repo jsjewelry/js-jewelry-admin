@@ -167,6 +167,7 @@ function imgUrl(u){
   if(!u) return '';
   if(u.includes('drive.google.com/file/d/')){const m=u.match(/\/d\/([a-zA-Z0-9_-]+)/);if(m)return 'https://lh3.googleusercontent.com/d/'+m[1];}
   if(u.includes('drive.google.com/open?id=')){const m=u.match(/id=([a-zA-Z0-9_-]+)/);if(m)return 'https://lh3.googleusercontent.com/d/'+m[1];}
+  if(u.includes('drive.google.com/thumbnail')){const m=u.match(/[?&]id=([a-zA-Z0-9_-]+)/);if(m)return 'https://lh3.googleusercontent.com/d/'+m[1];}
   return u;
 }
 async function fetchSheet(name){
@@ -222,6 +223,7 @@ document.getElementById('order-form').addEventListener('submit',async e=>{
     source:'catalog-order-form',
     datetime:new Date().toISOString(),
     sku:product.sku, productName:product.name, category:product.category, price:product.price,
+    imageUrl:imgUrl(product.imageUrl),
     customerName:document.getElementById('f-name').value.trim(),
     phone:document.getElementById('f-phone').value.trim(),
     sizeAdjust:document.getElementById('f-size').value.trim(),

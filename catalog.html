@@ -161,6 +161,16 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .card-mat  { font-size: 11px; color: var(--text-2); margin-bottom: 10px; }
 .card-foot { display: flex; align-items: center; justify-content: space-between; }
 .card-price { font-size: 15px; font-weight: 700; color: var(--gold-d); letter-spacing: -0.3px; }
+.card-price-old { font-size: 12px; font-weight: 500; color: var(--text-3); text-decoration: line-through; margin-right: 6px; }
+.card-price.promo { color: #c0271e; }
+.price-line { display: flex; align-items: baseline; flex-wrap: wrap; }
+.sale-badge {
+  position: absolute; top: 12px; right: 12px; z-index: 3;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.3px;
+  padding: 3px 8px; border-radius: 5px;
+  background: #c0271e; color: #fff;
+  box-shadow: 0 2px 8px rgba(192,39,30,0.35);
+}
 .card-status { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
                padding: 2px 7px; border-radius: 4px;
                background: rgba(92,186,125,0.12); color: #2d7a50; }
@@ -240,6 +250,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 .modal-price-lbl { font-size: 11px; color: var(--text-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 .modal-price { font-size: 28px; font-weight: 700; color: var(--gold-d); letter-spacing: -1px; }
+.modal-price-old { font-size: 16px; font-weight: 500; color: var(--text-3); text-decoration: line-through; margin-right: 10px; }
+.modal-save-badge { display: inline-block; background: #c0271e; color: #fff; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 5px; vertical-align: middle; margin-left: 6px; }
 .modal-status-badge {
   font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
   padding: 4px 10px; border-radius: 6px;
@@ -375,7 +387,7 @@ const CONFIG = {
   // A=id(0) B=sku(1) C=name(2) D=category(3) E=material(4) F=weight(5)
   // G=gemType(6) H=gemWeight(7) I=costPrice(8) J=sellPrice(9) K=stock(10)
   // L=status(11) M=imageUrl(12) N=notes(13) O=createdAt(14) P=size(15)
-  col: { sku:1, name:2, category:3, material:4, weight:5, gemType:6, gemWeight:7, sellPrice:9, size:15, notes:13, imageUrl:12, status:11, videoUrl:18 },
+  col: { sku:1, name:2, category:3, material:4, weight:5, gemType:6, gemWeight:7, sellPrice:9, size:15, notes:13, imageUrl:12, status:11, videoUrl:18, promoPrice:19 },
   // แท็บพลอย (Gems): id(0) code(1) gemType(2) weight-ct(3) shape(4) size(5) pricePerCt(6) stock(7) status(8) notes(9) createdAt(10) imageUrl(11)
   gemSheet: 'Gems',
   gemCol: { code:1, gemType:2, weight:3, shape:4, size:5, pricePerCt:6, stock:7, status:8, notes:9, imageUrl:11, pieces:13, videoUrl:14 },
@@ -429,6 +441,7 @@ async function fetchProducts() {
     imageUrl:  row[c.imageUrl] || '',
     status:    row[c.status]   || '',
     videoUrl:  row[c.videoUrl] || '',
+    promoPrice: parseFloat(row[c.promoPrice]) || 0,
   }));
   const g = CONFIG.gemCol;
   const gems = gemRows.map(row => {
@@ -451,6 +464,7 @@ async function fetchProducts() {
       status:     row[g.status]  || '',
       pieces:     Number(row[g.pieces]) || 1,
       videoUrl:   row[g.videoUrl] || '',
+      promoPrice: 0,
     };
   });
   return [...products, ...gems]
@@ -478,6 +492,10 @@ function fmtPrice(n) {
   return '฿' + Number(n).toLocaleString('th-TH');
 }
 
+// ราคาโปรโมชั่น: มีโปรฯ เมื่อ promoPrice > 0 และต่ำกว่าราคาขาย
+function hasPromo(p) { return p.promoPrice > 0 && p.promoPrice < p.sellPrice; }
+function effPrice(p) { return hasPromo(p) ? p.promoPrice : p.sellPrice; }
+
 /* ══════════════════════════════════════════════
    🗂️  STATE
 ══════════════════════════════════════════════ */
@@ -495,8 +513,8 @@ function getFiltered() {
       p.category.toLowerCase().includes(q)
     );
   }
-  if (sortBy === 'asc')  list.sort((a,b) => a.sellPrice - b.sellPrice);
-  if (sortBy === 'desc') list.sort((a,b) => b.sellPrice - a.sellPrice);
+  if (sortBy === 'asc')  list.sort((a,b) => effPrice(a) - effPrice(b));
+  if (sortBy === 'desc') list.sort((a,b) => effPrice(b) - effPrice(a));
   return list;
 }
 
@@ -512,11 +530,19 @@ function cardHTML(p) {
     : '';
   const ph = `<div class="card-img-ph" style="${imgUrl?'display:none':''}">${emoji}</div>`;
 
+  const promo = hasPromo(p);
+  const off   = promo ? Math.round((1 - p.promoPrice / p.sellPrice) * 100) : 0;
+  const saleBadge = promo ? `<span class="sale-badge">-${off}%</span>` : '';
+  const priceHTML = promo
+    ? `<span class="card-price-old">${fmtPrice(p.sellPrice)}</span><span class="card-price promo">${fmtPrice(p.promoPrice)}</span>`
+    : `<span class="card-price">${fmtPrice(p.sellPrice)}</span>`;
+
   return `
   <article class="card" onclick="openModal('${p.sku}')" tabindex="0"
            onkeydown="if(event.key==='Enter')openModal('${p.sku}')">
     <div class="card-img-wrap">
       ${imgEl}${ph}
+      ${saleBadge}
       <div class="card-overlay">
         <span class="view-btn">ดูรายละเอียด →</span>
       </div>
@@ -527,7 +553,7 @@ function cardHTML(p) {
       <div class="card-name">${p.name}</div>
       <div class="card-mat">${p.material || (p.gemWeight ? p.gemWeight + ' กะรัต' : '—')}</div>
       <div class="card-foot">
-        <span class="card-price">${fmtPrice(p.sellPrice)}</span>
+        <span class="price-line">${priceHTML}</span>
         <span class="card-status">✓ พร้อมขาย</span>
       </div>
     </div>
@@ -594,7 +620,14 @@ function openModal(sku) {
   document.getElementById('js-modal-cat').textContent  = emoji + ' ' + p.category;
   document.getElementById('js-modal-name').textContent = p.name;
   document.getElementById('js-modal-sku').textContent  = 'รหัสสินค้า: ' + p.sku;
-  document.getElementById('js-modal-price').textContent = fmtPrice(p.sellPrice);
+
+  const priceEl = document.getElementById('js-modal-price');
+  if (hasPromo(p)) {
+    const off = Math.round((1 - p.promoPrice / p.sellPrice) * 100);
+    priceEl.innerHTML = `<span class="modal-price-old">${fmtPrice(p.sellPrice)}</span><span style="color:#c0271e">${fmtPrice(p.promoPrice)}</span><span class="modal-save-badge">-${off}%</span>`;
+  } else {
+    priceEl.textContent = fmtPrice(p.sellPrice);
+  }
 
   const lineMsg = encodeURIComponent(`สนใจสินค้า ${p.sku}`);
   document.getElementById('js-modal-line').innerHTML =

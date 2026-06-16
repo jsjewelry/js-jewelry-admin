@@ -10,7 +10,7 @@
 //  F:sellPrice  G:costPrice  H:profit
 // ============================================================
 
-const PRODUCTS_RANGE = `${CONFIG.PRODUCTS_SHEET}!A:S`;
+const PRODUCTS_RANGE = `${CONFIG.PRODUCTS_SHEET}!A:T`;
 const SALES_RANGE    = `${CONFIG.SALES_SHEET}!A:H`;
 const GEMS_RANGE     = `${CONFIG.GEMS_SHEET}!A:O`;
 
@@ -46,7 +46,8 @@ function rowToProduct(r) {
     size:       r[15] || '',
     highlight:  r[16] || '',
     postStatus: r[17] || '',
-    videoUrl:   r[18] || ''
+    videoUrl:   r[18] || '',
+    promoPrice: Number(r[19] || 0)
   };
 }
 
@@ -55,7 +56,8 @@ function productToRow(p) {
     p.id, p.sku, p.name, p.category, p.material, p.weight,
     p.gemType, p.gemWeight, p.costPrice, p.sellPrice,
     p.stock, p.status, p.imageUrl, p.notes, p.createdAt,
-    p.size || '', p.highlight || '', p.postStatus || '', p.videoUrl || ''
+    p.size || '', p.highlight || '', p.postStatus || '', p.videoUrl || '',
+    p.promoPrice || ''
   ];
 }
 
@@ -78,7 +80,7 @@ async function sheetsAddProduct(product) {
 async function sheetsUpdateProduct(product) {
   const rowNum = await findProductRow(product.sku);
   if (!rowNum) throw new Error(`ไม่พบ SKU: ${product.sku}`);
-  const range = `${CONFIG.PRODUCTS_SHEET}!A${rowNum}:S${rowNum}`;
+  const range = `${CONFIG.PRODUCTS_SHEET}!A${rowNum}:T${rowNum}`;
   await gapi.client.sheets.spreadsheets.values.update({
     spreadsheetId: CONFIG.SHEET_ID,
     range,
@@ -106,7 +108,7 @@ async function sheetsDeleteProduct(sku) {
   const rowNum = await findProductRow(sku);
   if (!rowNum) throw new Error(`ไม่พบ SKU: ${sku}`);
   // ล้างข้อมูลในแถว (ไม่ลบแถวจริง เพื่อรักษา row index)
-  const range = `${CONFIG.PRODUCTS_SHEET}!A${rowNum}:O${rowNum}`;
+  const range = `${CONFIG.PRODUCTS_SHEET}!A${rowNum}:T${rowNum}`;
   await gapi.client.sheets.spreadsheets.values.clear({
     spreadsheetId: CONFIG.SHEET_ID,
     range
@@ -134,14 +136,14 @@ async function ensureProductsHeader() {
   if (!resp.result.values || resp.result.values.length === 0) {
     await gapi.client.sheets.spreadsheets.values.update({
       spreadsheetId: CONFIG.SHEET_ID,
-      range: `${CONFIG.PRODUCTS_SHEET}!A1:S1`,
+      range: `${CONFIG.PRODUCTS_SHEET}!A1:T1`,
       valueInputOption: 'RAW',
       resource: {
         values: [[
           'id','sku','name','category','material','weight',
           'gemType','gemWeight','costPrice','sellPrice',
           'stock','status','imageUrl','notes','createdAt','size',
-          'highlight','postStatus','videoUrl'
+          'highlight','postStatus','videoUrl','promoPrice'
         ]]
       }
     });

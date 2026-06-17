@@ -159,6 +159,8 @@ textarea{resize:vertical;min-height:64px}
   </div>
 </div>
 
+<!-- LIFF SDK (ดึง LINE userId ของลูกค้า เมื่อเปิดฟอร์มผ่านแอป LINE) -->
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
 /* ===== CONFIG ===== */
 const CONFIG = {
@@ -166,6 +168,7 @@ const CONFIG = {
   productSheet: 'Products',
   gemSheet: 'Gems',
   lineId: '@888zbakd',
+  liffId: '2010424600-KGW8j30o',
   webhookUrl: 'https://hook.us2.make.com/p5c1up46p35plsqkyqpeeu6mbfwkhanv'
 };
 // คอลัมน์ (0-based)
@@ -174,6 +177,7 @@ const GCOL = { code:1, gemType:2, weight:3, pricePerCt:6, imageUrl:11, promoPric
 const ACCOUNT_NO = '2832183558';
 
 let product = null;
+let lineUserId = '';
 const qs = new URLSearchParams(location.search);
 const SKU = (qs.get('sku') || '').trim().toUpperCase();
 
@@ -209,6 +213,17 @@ function updatePrice(){
   } else {
     el.textContent = fmt(total) + suffix;
   }
+}
+
+async function initLiff(){
+  try{
+    if(!CONFIG.liffId || !window.liff) return;
+    await liff.init({ liffId: CONFIG.liffId });
+    if(liff.isLoggedIn()){
+      const p = await liff.getProfile();
+      lineUserId = p.userId || '';
+    }
+  }catch(e){ /* เปิดนอกแอป LINE หรือ LIFF ไม่พร้อม → ข้าม userId, ฟอร์มยังใช้งานได้ปกติ */ }
 }
 
 async function init(){
@@ -271,6 +286,7 @@ document.getElementById('order-form').addEventListener('submit',async e=>{
   const noteCombined=[noteVal,certNote].filter(Boolean).join(' | ');
   const payload={
     source:'catalog-order-form',
+    lineUserId:lineUserId,
     datetime:new Date().toISOString(),
     sku:product.sku, productName:product.name, category:product.category,
     price:total,
@@ -300,6 +316,7 @@ document.getElementById('order-form').addEventListener('submit',async e=>{
   }
 });
 
+initLiff();
 init();
 </script>
 </body>

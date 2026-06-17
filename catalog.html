@@ -390,7 +390,7 @@ const CONFIG = {
   col: { sku:1, name:2, category:3, material:4, weight:5, gemType:6, gemWeight:7, sellPrice:9, size:15, notes:13, imageUrl:12, status:11, videoUrl:18, promoPrice:19 },
   // แท็บพลอย (Gems): id(0) code(1) gemType(2) weight-ct(3) shape(4) size(5) pricePerCt(6) stock(7) status(8) notes(9) createdAt(10) imageUrl(11)
   gemSheet: 'Gems',
-  gemCol: { code:1, gemType:2, weight:3, shape:4, size:5, pricePerCt:6, stock:7, status:8, notes:9, imageUrl:11, pieces:13, videoUrl:14 },
+  gemCol: { code:1, gemType:2, weight:3, shape:4, size:5, pricePerCt:6, stock:7, status:8, notes:9, imageUrl:11, pieces:13, videoUrl:14, promoPrice:15 },
 };
 
 /* ══════════════════════════════════════════════
@@ -464,7 +464,7 @@ async function fetchProducts() {
       status:     row[g.status]  || '',
       pieces:     Number(row[g.pieces]) || 1,
       videoUrl:   row[g.videoUrl] || '',
-      promoPrice: 0,
+      promoPrice: parseFloat(row[g.promoPrice]) || 0,
     };
   });
   return [...products, ...gems]

@@ -391,6 +391,11 @@ tr.clickable{cursor:pointer}
           style="color:var(--gold);font-weight:700;background:var(--s3)">
       </div>
       <div class="fg">
+        <label>🔖 ราคาโปรโมชั่น (฿)</label>
+        <input type="number" id="gm-promo" min="0" placeholder="ว่าง = ไม่มีโปรฯ" oninput="calcGemTotal()">
+        <div id="gm-promo-hint" style="font-size:10px;margin-top:3px;height:12px"></div>
+      </div>
+      <div class="fg">
         <label>แหล่งกำเนิด (Origin)</label>
         <input id="gm-origin" placeholder="เช่น พม่า, ศรีลังกา, ไทย, โมซัมบิก…">
       </div>
@@ -879,6 +884,8 @@ function resetGemForm() {
   document.getElementById('gm-price').value   = '';
   document.getElementById('gm-size').value    = '';
   document.getElementById('gm-total').value   = '';
+  document.getElementById('gm-promo').value   = '';
+  const _gph = document.getElementById('gm-promo-hint'); if (_gph) _gph.textContent = '';
   document.getElementById('gm-origin').value  = '';
   document.getElementById('gm-notes').value   = '';
   document.getElementById('gm-video').value   = '';
@@ -911,6 +918,7 @@ function openEditGem(code) {
   document.getElementById('gm-notes').value  = g.notes !== '-' ? g.notes : '';
   document.getElementById('gm-origin').value = g.origin !== '-' ? g.origin : '';
   document.getElementById('gm-video').value  = g.videoUrl || '';
+  document.getElementById('gm-promo').value  = (g.promoPrice && g.promoPrice > 0) ? g.promoPrice : '';
   if (g.imageUrl) {
     document.getElementById('gm-img-current').textContent = '📷 มีรูปภาพอยู่แล้ว (อัปโหลดใหม่เพื่อเปลี่ยน)';
   }
@@ -926,6 +934,20 @@ function calcGemTotal() {
   document.getElementById('gm-total').value = total > 0
     ? '฿' + total.toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2})
     : '';
+  // hint ราคาโปรโมชั่น: ต้องต่ำกว่าราคาสุทธิ + โชว์ % ส่วนลด
+  const promo = Number(document.getElementById('gm-promo').value) || 0;
+  const hint  = document.getElementById('gm-promo-hint');
+  if (hint) {
+    if (promo > 0 && total > 0 && promo >= total) {
+      hint.style.color = 'var(--red)';
+      hint.textContent = '⚠️ ต้องต่ำกว่าราคาสุทธิ';
+    } else if (promo > 0 && total > 0) {
+      hint.style.color = 'var(--green)';
+      hint.textContent = `✓ ลด ${Math.round((1 - promo / total) * 100)}%`;
+    } else {
+      hint.textContent = '';
+    }
+  }
 }
 
 function previewGemImage(input) {
@@ -988,6 +1010,12 @@ async function saveGem() {
     const notes  = document.getElementById('gm-notes').value.trim()  || '-';
     const origin = document.getElementById('gm-origin').value.trim() || '-';
     const videoUrl = document.getElementById('gm-video').value.trim();
+    const promoPrice = parseFloat(document.getElementById('gm-promo').value) || 0;
+    const netPrice = pricePerCt * weight;
+    if (promoPrice > 0 && netPrice > 0 && promoPrice >= netPrice) {
+      showToast('ราคาโปรโมชั่นต้องต่ำกว่าราคาสุทธิค่ะ', 'error');
+      return;
+    }
 
     if (_editGemCode) {
       const g = gems.find(x => x.code === _editGemCode);
@@ -997,7 +1025,7 @@ async function saveGem() {
         imageUrl = await uploadGemImage(imageFile, g.code);
       }
       Object.assign(g, {
-        gemType, weight, shape, stock, pieces, pricePerCt, size, notes, origin, imageUrl, videoUrl,
+        gemType, weight, shape, stock, pieces, pricePerCt, size, notes, origin, imageUrl, videoUrl, promoPrice,
         status: stock > 0 ? 'พร้อมขาย' : 'หมดสต็อก'
       });
       btn.textContent = '⏳ บันทึก…';
@@ -1012,7 +1040,7 @@ async function saveGem() {
       }
       const newGem = {
         id: generateId(), code, gemType, weight, shape, stock, pieces,
-        pricePerCt, size, notes, origin, imageUrl, videoUrl,
+        pricePerCt, size, notes, origin, imageUrl, videoUrl, promoPrice,
         status: stock > 0 ? 'พร้อมขาย' : 'หมดสต็อก',
         createdAt: todayISO()
       };

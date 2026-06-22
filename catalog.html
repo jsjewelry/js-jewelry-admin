@@ -741,7 +741,6 @@ function openModal(sku) {
   if (p.shape && p.shape !== '-') rows.push(['รูปทรง', p.shape]);
   if (p.pieces) rows.push(['จำนวนเม็ด', p.pieces + ' เม็ด']);
   if (p.size && p.size !== '-') rows.push(['ขนาด', p.size]);
-  if (p.pricePerCt) rows.push(['ราคา/กะรัต', fmtPrice(p.pricePerCt)]);
   if (p.notes && p.notes !== '-') rows.push(['รายละเอียด', p.notes]);
   document.getElementById('js-modal-rows').innerHTML = rows.map(([l,v]) => `
     <div class="modal-row">

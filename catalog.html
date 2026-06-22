@@ -130,6 +130,15 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .card:hover .card-img { transform: scale(1.06); }
 .card-img-ph { font-size: 40px; opacity: 0.3; }
 
+/* multi-image hint (กล้องซ้อน บอกว่ามีหลายรูป) */
+.multi-badge {
+  position: absolute; bottom: 10px; left: 10px; z-index: 3;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.3px;
+  padding: 3px 7px; border-radius: 5px;
+  background: rgba(0,0,0,0.55); color: #fff;
+  display: flex; align-items: center; gap: 3px;
+}
+
 /* Overlay */
 .card-overlay {
   position: absolute; inset: 0;
@@ -221,6 +230,33 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   width: 100%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
   font-size: 60px; background: var(--gold-bg); border-radius: 20px 20px 0 0; opacity: 0.4;
 }
+
+/* ── Carousel (รูปหลายรูปในป็อปอัป) ── */
+.carousel { position: relative; width: 100%; aspect-ratio: 1; overflow: hidden;
+            border-radius: 20px 20px 0 0; background: var(--gold-bg); }
+.car-track { display: flex; height: 100%; transition: transform 0.3s ease; }
+.car-slide { min-width: 100%; height: 100%; }
+.car-slide .modal-img { width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; border-radius: 0; }
+.car-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 8;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(0,0,0,0.42); color: #fff; font-size: 24px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--ease);
+}
+.car-arrow:hover { background: rgba(0,0,0,0.72); }
+.car-arrow.left  { left: 10px; }
+.car-arrow.right { right: 10px; }
+.car-dots {
+  position: absolute; bottom: 12px; left: 0; right: 0;
+  display: flex; gap: 6px; justify-content: center; z-index: 8;
+}
+.car-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: rgba(255,255,255,0.65); cursor: pointer;
+  transition: all var(--ease); box-shadow: 0 0 4px rgba(0,0,0,0.3);
+}
+.car-dot.active { background: var(--gold); width: 20px; border-radius: 4px; }
 
 .modal-close {
   position: absolute; top: 12px; right: 12px; z-index: 10;
@@ -387,7 +423,8 @@ const CONFIG = {
   // A=id(0) B=sku(1) C=name(2) D=category(3) E=material(4) F=weight(5)
   // G=gemType(6) H=gemWeight(7) I=costPrice(8) J=sellPrice(9) K=stock(10)
   // L=status(11) M=imageUrl(12) N=notes(13) O=createdAt(14) P=size(15)
-  col: { sku:1, name:2, category:3, material:4, weight:5, gemType:6, gemWeight:7, sellPrice:9, size:15, notes:13, imageUrl:12, status:11, videoUrl:18, promoPrice:19 },
+  // U=imageUrl2(20) V=imageUrl3(21)
+  col: { sku:1, name:2, category:3, material:4, weight:5, gemType:6, gemWeight:7, sellPrice:9, size:15, notes:13, imageUrl:12, status:11, videoUrl:18, promoPrice:19, image2:20, image3:21 },
   // แท็บพลอย (Gems): id(0) code(1) gemType(2) weight-ct(3) shape(4) size(5) pricePerCt(6) stock(7) status(8) notes(9) createdAt(10) imageUrl(11)
   gemSheet: 'Gems',
   gemCol: { code:1, gemType:2, weight:3, shape:4, size:5, pricePerCt:6, stock:7, status:8, notes:9, imageUrl:11, pieces:13, videoUrl:14, promoPrice:15 },
@@ -442,6 +479,8 @@ async function fetchProducts() {
     status:    row[c.status]   || '',
     videoUrl:  row[c.videoUrl] || '',
     promoPrice: parseFloat(row[c.promoPrice]) || 0,
+    image2:    row[c.image2]   || '',
+    image3:    row[c.image3]   || '',
   }));
   const g = CONFIG.gemCol;
   const gems = gemRows.map(row => {
@@ -485,6 +524,7 @@ function getImgUrl(url) {
     const m = url.match(/id=([a-zA-Z0-9_-]+)/);
     if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
   }
+  // drive.google.com/thumbnail?id=... → ใช้ได้ตรง ๆ (รูปแบบที่ระบบอัปโหลดบันทึก)
   return url; // URL ตรง
 }
 
@@ -495,6 +535,14 @@ function fmtPrice(n) {
 // ราคาโปรโมชั่น: มีโปรฯ เมื่อ promoPrice > 0 และต่ำกว่าราคาขาย
 function hasPromo(p) { return p.promoPrice > 0 && p.promoPrice < p.sellPrice; }
 function effPrice(p) { return hasPromo(p) ? p.promoPrice : p.sellPrice; }
+
+// รวมรูปทั้งหมดของสินค้า (รูปหลัก + รูปเพิ่มเติม)
+function getImages(p) {
+  return [p.imageUrl, p.image2, p.image3]
+    .filter(Boolean)
+    .map(getImgUrl)
+    .filter(Boolean);
+}
 
 /* ══════════════════════════════════════════════
    🗂️  STATE
@@ -522,13 +570,15 @@ function getFiltered() {
    🃏  CARD RENDER
 ══════════════════════════════════════════════ */
 function cardHTML(p) {
-  const imgUrl = getImgUrl(p.imageUrl);
+  const imgs   = getImages(p);
+  const imgUrl = imgs[0] || '';
   const emoji  = CAT_EMOJI[p.category] || '💎';
   const imgEl  = imgUrl
     ? `<img class="card-img" src="${imgUrl}" alt="${p.name}" loading="lazy"
          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
     : '';
   const ph = `<div class="card-img-ph" style="${imgUrl?'display:none':''}">${emoji}</div>`;
+  const multi = imgs.length > 1 ? `<div class="multi-badge">📷 ${imgs.length}</div>` : '';
 
   const promo = hasPromo(p);
   const off   = promo ? Math.round((1 - p.promoPrice / p.sellPrice) * 100) : 0;
@@ -542,7 +592,7 @@ function cardHTML(p) {
            onkeydown="if(event.key==='Enter')openModal('${p.sku}')">
     <div class="card-img-wrap">
       ${imgEl}${ph}
-      ${saleBadge}
+      ${saleBadge}${multi}
       <div class="card-overlay">
         <span class="view-btn">ดูรายละเอียด →</span>
       </div>
@@ -604,18 +654,68 @@ function setSort(s) {
 }
 
 /* ══════════════════════════════════════════════
+   🎠  CAROUSEL (รูปหลายรูปในป็อปอัป)
+══════════════════════════════════════════════ */
+let carIdx = 0, carLen = 1, carTouchX = 0;
+
+function buildCarousel(images, emoji, name) {
+  if (!images.length) return `<div class="modal-img-ph">${emoji}</div>`;
+  if (images.length === 1) {
+    return `<img class="modal-img" src="${images[0]}" alt="${name}"
+             onerror="this.outerHTML='<div class=\\'modal-img-ph\\'>${emoji}</div>'">`;
+  }
+  const slides = images.map(u =>
+    `<div class="car-slide"><img class="modal-img" src="${u}" alt="${name}"></div>`).join('');
+  const dots = images.map((_, i) =>
+    `<span class="car-dot${i === 0 ? ' active' : ''}" onclick="carGo(${i})"></span>`).join('');
+  return `
+    <div class="carousel">
+      <div class="car-track" id="carTrack" style="transform:translateX(0%)">${slides}</div>
+      <button class="car-arrow left"  onclick="carMove(-1)" aria-label="ก่อนหน้า">‹</button>
+      <button class="car-arrow right" onclick="carMove(1)"  aria-label="ถัดไป">›</button>
+      <div class="car-dots">${dots}</div>
+    </div>`;
+}
+
+function carRender() {
+  const track = document.getElementById('carTrack');
+  if (!track) return;
+  track.style.transform = `translateX(${-carIdx * 100}%)`;
+  document.querySelectorAll('.car-dot').forEach((d, i) => d.classList.toggle('active', i === carIdx));
+}
+
+function carMove(dir) {
+  if (carLen <= 1) return;
+  carIdx = (carIdx + dir + carLen) % carLen;
+  carRender();
+}
+
+function carGo(i) { carIdx = i; carRender(); }
+
+function carSwipeInit() {
+  const track = document.getElementById('carTrack');
+  if (!track) return;
+  track.addEventListener('touchstart', e => { carTouchX = e.touches[0].clientX; }, { passive: true });
+  track.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - carTouchX;
+    if (Math.abs(dx) > 40) carMove(dx < 0 ? 1 : -1);
+  }, { passive: true });
+}
+
+/* ══════════════════════════════════════════════
    🔲  MODAL
 ══════════════════════════════════════════════ */
 function openModal(sku) {
   const p = all.find(x => x.sku === sku);
   if (!p) return;
-  const imgUrl = getImgUrl(p.imageUrl);
   const emoji  = CAT_EMOJI[p.category] || '💎';
 
-  document.getElementById('js-modal-img-wrap').innerHTML = imgUrl
-    ? `<img class="modal-img" src="${imgUrl}" alt="${p.name}"
-           onerror="this.outerHTML='<div class=\\'modal-img-ph\\'>${emoji}</div>'">`
-    : `<div class="modal-img-ph">${emoji}</div>`;
+  // รูปทั้งหมด → carousel (ถ้ามีรูปเดียวจะโชว์ปกติ)
+  const images = getImages(p);
+  carIdx = 0;
+  carLen = images.length || 1;
+  document.getElementById('js-modal-img-wrap').innerHTML = buildCarousel(images, emoji, p.name);
+  carSwipeInit();
 
   document.getElementById('js-modal-cat').textContent  = emoji + ' ' + p.category;
   document.getElementById('js-modal-name').textContent = p.name;
@@ -641,7 +741,7 @@ function openModal(sku) {
   if (p.shape && p.shape !== '-') rows.push(['รูปทรง', p.shape]);
   if (p.pieces) rows.push(['จำนวนเม็ด', p.pieces + ' เม็ด']);
   if (p.size && p.size !== '-') rows.push(['ขนาด', p.size]);
-  
+  if (p.pricePerCt) rows.push(['ราคา/กะรัต', fmtPrice(p.pricePerCt)]);
   if (p.notes && p.notes !== '-') rows.push(['รายละเอียด', p.notes]);
   document.getElementById('js-modal-rows').innerHTML = rows.map(([l,v]) => `
     <div class="modal-row">
@@ -707,7 +807,13 @@ document.getElementById('js-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('js-modal')) closeModal();
 });
 document.getElementById('js-modal-close').addEventListener('click', closeModal);
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if (document.getElementById('js-modal').classList.contains('open')) {
+    if (e.key === 'ArrowLeft')  carMove(-1);
+    if (e.key === 'ArrowRight') carMove(1);
+  }
+});
 window.addEventListener('scroll', () => {
   document.getElementById('js-top').classList.toggle('show', scrollY > 320);
 }, { passive: true });

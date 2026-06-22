@@ -59,6 +59,7 @@ select option{background:var(--s2)}
 .img-overlay{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;opacity:0;transition:.2s;flex-direction:column;gap:6px;font-size:12px;color:#fff}
 .img-upload-area:hover .img-overlay{opacity:1}
 .img-upload-area input[type=file]{display:none}
+.img-upload-area.small{height:120px;gap:4px}
 
 .sku-badge{display:inline-block;background:rgba(201,168,76,.15);color:var(--gold);border:1px solid var(--gold-d);border-radius:6px;padding:4px 12px;font-size:13px;font-weight:700;font-family:monospace}
 input.sku-badge{width:120px;outline:none;cursor:text;border-color:var(--gold-d)}
@@ -129,21 +130,45 @@ input.sku-badge.sku-error{border-color:var(--red);color:var(--red)}
         <!-- Left: Image -->
         <div class="card" style="padding:16px">
           <div class="fg">
-            <label>รูปภาพสินค้า</label>
-            <div class="img-upload-area" id="img-area" onclick="document.getElementById('img-input').click()">
+            <label>รูปหลัก (รูปที่ 1)</label>
+            <div class="img-upload-area" id="img-area-0" onclick="document.getElementById('img-input-0').click()">
               <div style="font-size:32px">📷</div>
               <div>คลิกเพื่ออัปโหลด</div>
               <div style="font-size:11px">JPG / PNG</div>
-              <input type="file" id="img-input" accept="image/*" onchange="handleImgSelect(this)">
+              <input type="file" id="img-input-0" accept="image/*" onchange="handleImgSelect(this,0)">
               <div class="img-overlay"><span style="font-size:22px">🔄</span><span>เปลี่ยนรูป</span></div>
             </div>
+            <input type="url" id="p-imgurl-0" placeholder="หรือวาง URL รูปหลัก" oninput="previewUrl(this.value,0)" style="margin-top:6px">
+            <button class="btn bo sm" style="margin-top:6px" onclick="clearImg(0)">🗑️ ลบรูปหลัก</button>
+          </div>
+
+          <div class="fg" style="margin-top:14px">
+            <label>รูปเพิ่มเติม (เลื่อนดูใน catalog)</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div>
+                <div class="img-upload-area small" id="img-area-1" onclick="document.getElementById('img-input-1').click()">
+                  <div style="font-size:24px">➕</div>
+                  <div style="font-size:11px">รูปที่ 2</div>
+                  <input type="file" id="img-input-1" accept="image/*" onchange="handleImgSelect(this,1)">
+                  <div class="img-overlay"><span style="font-size:18px">🔄</span></div>
+                </div>
+                <input type="url" id="p-imgurl-1" placeholder="URL" oninput="previewUrl(this.value,1)" style="margin-top:5px;font-size:11px">
+                <button class="btn bo sm" style="margin-top:4px;width:100%;justify-content:center" onclick="clearImg(1)">ลบ</button>
+              </div>
+              <div>
+                <div class="img-upload-area small" id="img-area-2" onclick="document.getElementById('img-input-2').click()">
+                  <div style="font-size:24px">➕</div>
+                  <div style="font-size:11px">รูปที่ 3</div>
+                  <input type="file" id="img-input-2" accept="image/*" onchange="handleImgSelect(this,2)">
+                  <div class="img-overlay"><span style="font-size:18px">🔄</span></div>
+                </div>
+                <input type="url" id="p-imgurl-2" placeholder="URL" oninput="previewUrl(this.value,2)" style="margin-top:5px;font-size:11px">
+                <button class="btn bo sm" style="margin-top:4px;width:100%;justify-content:center" onclick="clearImg(2)">ลบ</button>
+              </div>
+            </div>
             <div class="upload-progress" id="upload-status"></div>
-            <button class="btn bo sm" style="margin-top:4px" onclick="clearImg()">🗑️ ลบรูป</button>
           </div>
-          <div class="fg" style="margin-top:8px">
-            <label>หรือใส่ URL รูป</label>
-            <input type="url" id="p-imgurl" placeholder="https://..." oninput="previewUrl(this.value)">
-          </div>
+
           <div class="fg" style="margin-top:8px">
             <label>🎬 URL วิดีโอ (YouTube)</label>
             <input type="url" id="p-video" placeholder="https://youtu.be/... (ถ้ามี)">
@@ -215,7 +240,7 @@ input.sku-badge.sku-error{border-color:var(--red);color:var(--red)}
 const params = new URLSearchParams(location.search);
 const editSku = params.get('sku'); // ถ้ามี = โหมดแก้ไข
 let editProduct = null;
-let selectedFile = null;
+let selectedFiles = [null, null, null]; // [รูปหลัก, รูปที่2, รูปที่3]
 
 async function onAppReady() {
   document.getElementById('form-loading').style.display = 'none';
@@ -253,8 +278,16 @@ async function loadEditProduct() {
   document.getElementById('p-notes').value = editProduct.notes === '-' ? '' : editProduct.notes;
 
   if (editProduct.imageUrl) {
-    document.getElementById('p-imgurl').value = editProduct.imageUrl;
-    previewUrl(editProduct.imageUrl);
+    document.getElementById('p-imgurl-0').value = editProduct.imageUrl;
+    previewUrl(editProduct.imageUrl, 0);
+  }
+  if (editProduct.image2) {
+    document.getElementById('p-imgurl-1').value = editProduct.image2;
+    previewUrl(editProduct.image2, 1);
+  }
+  if (editProduct.image3) {
+    document.getElementById('p-imgurl-2').value = editProduct.image3;
+    previewUrl(editProduct.image3, 2);
   }
   document.getElementById('p-video').value = editProduct.videoUrl || '';
   updateStatusPreview();
@@ -269,37 +302,58 @@ async function onCatChange() {
   }
 }
 
-function handleImgSelect(input) {
+/* ── รูปภาพ: รองรับหลายรูป (index 0=รูปหลัก, 1=รูปที่2, 2=รูปที่3) ── */
+function phMarkup(idx) {
+  if (idx === 0) {
+    return `<div style="font-size:32px">📷</div><div>คลิกเพื่ออัปโหลด</div><div style="font-size:11px">JPG / PNG</div><input type="file" id="img-input-0" accept="image/*" onchange="handleImgSelect(this,0)"><div class="img-overlay"><span style="font-size:22px">🔄</span><span>เปลี่ยนรูป</span></div>`;
+  }
+  return `<div style="font-size:24px">➕</div><div style="font-size:11px">รูปที่ ${idx + 1}</div><input type="file" id="img-input-${idx}" accept="image/*" onchange="handleImgSelect(this,${idx})"><div class="img-overlay"><span style="font-size:18px">🔄</span></div>`;
+}
+
+function renderImg(idx, src, isUrl) {
+  const area = document.getElementById('img-area-' + idx);
+  const big = idx === 0;
+  const onerr = isUrl ? ` onerror="imgError(${idx})"` : '';
+  const label = big ? '<span>เปลี่ยนรูป</span>' : '';
+  area.innerHTML = `<img src="${src}"${onerr}><div class="img-overlay"><span style="font-size:${big ? 22 : 18}px">🔄</span>${label}</div><input type="file" id="img-input-${idx}" accept="image/*" onchange="handleImgSelect(this,${idx})">`;
+  area.classList.add('has-img');
+  area.onclick = () => document.getElementById('img-input-' + idx).click();
+}
+
+function imgError(idx) {
+  const area = document.getElementById('img-area-' + idx);
+  area.classList.remove('has-img');
+  area.className = 'img-upload-area' + (idx > 0 ? ' small' : '');
+  area.innerHTML = phMarkup(idx);
+  area.onclick = () => document.getElementById('img-input-' + idx).click();
+}
+
+function handleImgSelect(input, idx) {
   const f = input.files[0];
   if (!f) return;
-  selectedFile = f;
+  selectedFiles[idx] = f;
   const reader = new FileReader();
   reader.onload = e => {
-    const area = document.getElementById('img-area');
-    area.innerHTML = `<img src="${e.target.result}"><div class="img-overlay"><span style="font-size:22px">🔄</span><span>เปลี่ยนรูป</span></div><input type="file" id="img-input" accept="image/*" onchange="handleImgSelect(this)">`;
-    area.classList.add('has-img');
-    area.onclick = () => document.getElementById('img-input').click();
+    renderImg(idx, e.target.result, false);
     document.getElementById('upload-status').textContent = '📎 รูปพร้อมอัปโหลดเมื่อกด บันทึก';
   };
   reader.readAsDataURL(f);
 }
 
-function previewUrl(url) {
+function previewUrl(url, idx) {
   if (!url) return;
-  const area = document.getElementById('img-area');
-  area.innerHTML = `<img src="${url}" onerror="this.parentElement.innerHTML='<span style=\\'font-size:32px\\'>📷</span><div>URL ไม่ถูกต้อง</div>'"><div class="img-overlay"><span style="font-size:22px">🔄</span><span>เปลี่ยนรูป</span></div><input type="file" id="img-input" accept="image/*" onchange="handleImgSelect(this)">`;
-  area.classList.add('has-img');
-  area.onclick = () => document.getElementById('img-input').click();
+  renderImg(idx, url, true);
 }
 
-function clearImg() {
-  selectedFile = null;
-  document.getElementById('p-imgurl').value = '';
-  const area = document.getElementById('img-area');
-  area.className = 'img-upload-area';
-  area.innerHTML = `<div style="font-size:32px">📷</div><div>คลิกเพื่ออัปโหลด</div><div style="font-size:11px">JPG / PNG</div><input type="file" id="img-input" accept="image/*" onchange="handleImgSelect(this)"><div class="img-overlay"><span style="font-size:22px">🔄</span><span>เปลี่ยนรูป</span></div>`;
-  area.onclick = () => document.getElementById('img-input').click();
-  document.getElementById('upload-status').textContent = '';
+function clearImg(idx) {
+  selectedFiles[idx] = null;
+  const u = document.getElementById('p-imgurl-' + idx);
+  if (u) u.value = '';
+  const area = document.getElementById('img-area-' + idx);
+  area.className = 'img-upload-area' + (idx > 0 ? ' small' : '');
+  area.innerHTML = phMarkup(idx);
+  area.onclick = () => document.getElementById('img-input-' + idx).click();
+  if (idx === 0) document.getElementById('upload-status').textContent = '';
 }
 
 function updateStatusPreview() {
@@ -387,14 +441,23 @@ async function saveProduct() {
     // ชื่อสินค้า: ถ้าแก้ไขให้ใช้ชื่อเดิม ถ้าใหม่ให้ auto-generate
     const name = editProduct ? editProduct.name : buildAutoName(cat, mat, gemVal || '');
 
-    // อัปโหลดรูปถ้ามีไฟล์ใหม่
-    let imageUrl = document.getElementById('p-imgurl').value.trim();
-    if (selectedFile) {
-      document.getElementById('upload-status').textContent = '☁️ กำลังอัปโหลดรูป…';
-      const compressed = await compressImage(selectedFile);
-      imageUrl = await driveUploadImage(compressed, sku);
+    // อัปโหลดรูปถ้ามีไฟล์ใหม่ (รองรับ 3 รูป: หลัก + อีก 2)
+    const imageUrls = [
+      document.getElementById('p-imgurl-0').value.trim(),
+      document.getElementById('p-imgurl-1').value.trim(),
+      document.getElementById('p-imgurl-2').value.trim()
+    ];
+    for (let i = 0; i < 3; i++) {
+      if (selectedFiles[i]) {
+        document.getElementById('upload-status').textContent = `☁️ กำลังอัปโหลดรูป ${i + 1}…`;
+        const compressed = await compressImage(selectedFiles[i]);
+        imageUrls[i] = await driveUploadImage(compressed, sku + (i > 0 ? '_' + (i + 1) : ''));
+      }
+    }
+    if (selectedFiles.some(Boolean)) {
       document.getElementById('upload-status').textContent = '✅ อัปโหลดรูปสำเร็จ';
     }
+    const imageUrl = imageUrls[0];
 
     const product = {
       id: editProduct ? editProduct.id : generateId(),
@@ -412,6 +475,8 @@ async function saveProduct() {
       stock,
       status: stock > 0 ? 'พร้อมขาย' : 'หมดสต็อก',
       imageUrl,
+      image2: imageUrls[1],
+      image3: imageUrls[2],
       notes: document.getElementById('p-notes').value.trim() || '-',
       createdAt: editProduct ? editProduct.createdAt : new Date().toISOString(),
       videoUrl: document.getElementById('p-video').value.trim(),

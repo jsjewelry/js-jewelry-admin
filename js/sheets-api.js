@@ -1,16 +1,18 @@
 // ============================================================
 //  sheets-api.js — Google Sheets CRUD
-//  Products Sheet columns (A-O):
+//  Products Sheet columns (A-V):
 //  A:id  B:sku  C:name  D:category  E:material  F:weight
 //  G:gemType  H:gemWeight  I:costPrice  J:sellPrice
 //  K:stock  L:status  M:imageUrl  N:notes  O:createdAt
+//  P:size  Q:highlight  R:postStatus  S:videoUrl  T:promoPrice
+//  U:imageUrl2  V:imageUrl3   ← รูปเพิ่มเติม (รูปที่ 2-3)
 //
 //  Sales Sheet columns (A-H):
 //  A:id  B:date  C:sku  D:productName  E:qty
 //  F:sellPrice  G:costPrice  H:profit
 // ============================================================
 
-const PRODUCTS_RANGE = `${CONFIG.PRODUCTS_SHEET}!A:T`;
+const PRODUCTS_RANGE = `${CONFIG.PRODUCTS_SHEET}!A:V`;
 const SALES_RANGE    = `${CONFIG.SALES_SHEET}!A:H`;
 const GEMS_RANGE     = `${CONFIG.GEMS_SHEET}!A:P`;
 
@@ -47,7 +49,9 @@ function rowToProduct(r) {
     highlight:  r[16] || '',
     postStatus: r[17] || '',
     videoUrl:   r[18] || '',
-    promoPrice: Number(r[19] || 0)
+    promoPrice: Number(r[19] || 0),
+    image2:     r[20] || '',
+    image3:     r[21] || ''
   };
 }
 
@@ -57,7 +61,7 @@ function productToRow(p) {
     p.gemType, p.gemWeight, p.costPrice, p.sellPrice,
     p.stock, p.status, p.imageUrl, p.notes, p.createdAt,
     p.size || '', p.highlight || '', p.postStatus || '', p.videoUrl || '',
-    p.promoPrice || ''
+    p.promoPrice || '', p.image2 || '', p.image3 || ''
   ];
 }
 
@@ -80,7 +84,7 @@ async function sheetsAddProduct(product) {
 async function sheetsUpdateProduct(product) {
   const rowNum = await findProductRow(product.sku);
   if (!rowNum) throw new Error(`ไม่พบ SKU: ${product.sku}`);
-  const range = `${CONFIG.PRODUCTS_SHEET}!A${rowNum}:T${rowNum}`;
+  const range = `${CONFIG.PRODUCTS_SHEET}!A${rowNum}:V${rowNum}`;
   await gapi.client.sheets.spreadsheets.values.update({
     spreadsheetId: CONFIG.SHEET_ID,
     range,
@@ -108,7 +112,7 @@ async function sheetsDeleteProduct(sku) {
   const rowNum = await findProductRow(sku);
   if (!rowNum) throw new Error(`ไม่พบ SKU: ${sku}`);
   // ล้างข้อมูลในแถว (ไม่ลบแถวจริง เพื่อรักษา row index)
-  const range = `${CONFIG.PRODUCTS_SHEET}!A${rowNum}:T${rowNum}`;
+  const range = `${CONFIG.PRODUCTS_SHEET}!A${rowNum}:V${rowNum}`;
   await gapi.client.sheets.spreadsheets.values.clear({
     spreadsheetId: CONFIG.SHEET_ID,
     range
@@ -131,19 +135,20 @@ async function findProductRow(sku) {
 async function ensureProductsHeader() {
   const resp = await gapi.client.sheets.spreadsheets.values.get({
     spreadsheetId: CONFIG.SHEET_ID,
-    range: `${CONFIG.PRODUCTS_SHEET}!A1:O1`
+    range: `${CONFIG.PRODUCTS_SHEET}!A1:V1`
   });
   if (!resp.result.values || resp.result.values.length === 0) {
     await gapi.client.sheets.spreadsheets.values.update({
       spreadsheetId: CONFIG.SHEET_ID,
-      range: `${CONFIG.PRODUCTS_SHEET}!A1:T1`,
+      range: `${CONFIG.PRODUCTS_SHEET}!A1:V1`,
       valueInputOption: 'RAW',
       resource: {
         values: [[
           'id','sku','name','category','material','weight',
           'gemType','gemWeight','costPrice','sellPrice',
           'stock','status','imageUrl','notes','createdAt','size',
-          'highlight','postStatus','videoUrl','promoPrice'
+          'highlight','postStatus','videoUrl','promoPrice',
+          'imageUrl2','imageUrl3'
         ]]
       }
     });
@@ -208,10 +213,10 @@ async function ensureSalesHeader() {
 }
 
 // ─── GEMS ──────────────────────────────────────────────────
-//  Gems Sheet columns (A-N):
+//  Gems Sheet columns (A-P):
 //  A:id  B:code  C:gemType  D:weight(ct)  E:shape
 //  F:size(mm)  G:pricePerCt  H:stock(ชุด)  I:status  J:notes
-//  K:createdAt  L:imageUrl  M:origin  N:pieces(เม็ด/ชุด)  O:videoUrl
+//  K:createdAt  L:imageUrl  M:origin  N:pieces(เม็ด/ชุด)  O:videoUrl  P:promoPrice
 
 async function sheetsGetAllGems() {
   await ensureGemsHeader();

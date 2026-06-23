@@ -457,6 +457,11 @@ async function saveProduct() {
     if (selectedFiles.some(Boolean)) {
       document.getElementById('upload-status').textContent = '✅ อัปโหลดรูปสำเร็จ';
     }
+    // กันรูปหลักว่าง: ถ้ามีรูปเพิ่มเติมแต่รูปหลักว่าง ให้เลื่อนขึ้นมาเป็นรูปหลักอัตโนมัติ
+    const _imgs = imageUrls.map(u => (u || '').trim()).filter(Boolean);
+    imageUrls[0] = _imgs[0] || '';
+    imageUrls[1] = _imgs[1] || '';
+    imageUrls[2] = _imgs[2] || '';
     const imageUrl = imageUrls[0];
 
     const product = {

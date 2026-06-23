@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JS Jewelry — อัปรูปหลายรหัส</title>
+<style>
+:root{
+  --gold:#c9a84c;--gold-l:#f0d485;--gold-d:#8a6d2f;
+  --bg:#0f0f0f;--s1:#1a1a1a;--s2:#222;--s3:#2c2c2c;
+  --border:#333;--text:#f0e8d0;--muted:#9a8a6a;
+  --red:#e05555;--green:#5cba7d;--blue:#5b9bd5;--r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh}
+
+/* Login */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:20px}
+.btn-login{background:var(--gold);color:#111;border:none;padding:11px 28px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;width:260px;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-login svg{width:18px;height:18px}
+.login-logo{font-size:28px;font-weight:800;color:var(--gold);letter-spacing:3px}
+
+/* App */
+#app-screen{display:none}
+header{background:linear-gradient(135deg,var(--s1),#1a1500);border-bottom:1px solid var(--gold-d);padding:12px 20px;display:flex;align-items:center;gap:12px}
+.logo{font-size:18px;font-weight:800;color:var(--gold);letter-spacing:2px}
+.logo span{font-size:11px;display:block;color:var(--muted);font-weight:400;letter-spacing:0}
+.header-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+.back-btn{background:transparent;border:1px solid var(--gold-d);color:var(--gold);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;text-decoration:none}
+.back-btn:hover{background:var(--gold-d)}
+.btn-signout{background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px}
+.btn-signout:hover{border-color:var(--red);color:var(--red)}
+
+main{padding:18px;max-width:1000px;margin:0 auto}
+.card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:16px}
+.card-title{font-size:15px;font-weight:700;color:var(--gold);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.hint{font-size:12px;color:var(--muted);line-height:1.7}
+.hint code{background:var(--s3);color:var(--gold-l);padding:1px 6px;border-radius:4px;font-size:11px}
+
+.btn{padding:9px 18px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.bg{background:var(--gold);color:#111}.bg:hover{background:var(--gold-l)}
+.bg:disabled{opacity:.4;cursor:not-allowed}
+.bo{background:transparent;border:1px solid var(--gold-d);color:var(--gold)}.bo:hover{background:var(--gold-d)}
+
+.pick{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.file-label{display:inline-flex;align-items:center;gap:8px;background:var(--s2);border:1px dashed var(--gold-d);color:var(--gold);padding:12px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600}
+.file-label:hover{background:var(--s3)}
+.file-label.disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+#folder{display:none}
+.switch{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;user-select:none}
+.switch input{width:16px;height:16px;accent-color:var(--gold);cursor:pointer}
+
+#status{font-size:13px;color:var(--muted);margin-top:10px}
+#summary{font-size:14px;margin-bottom:12px;line-height:1.8}
+#summary b{color:var(--gold)}
+
+.tw{overflow-x:auto;max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{position:sticky;top:0;background:var(--s2);text-align:left;padding:8px 12px;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+td{padding:7px 12px;border-bottom:1px solid var(--border)}
+tr:hover td{background:var(--s2)}
+.st-go{color:var(--green);font-weight:600}
+.st-skip{color:var(--muted)}
+.st-no{color:var(--red)}
+
+.progress-wrap{margin-top:6px}
+.bar-bg{height:14px;background:var(--s3);border-radius:7px;overflow:hidden;margin:6px 0}
+#bar{height:100%;width:0;background:linear-gradient(90deg,var(--gold-d),var(--gold));border-radius:7px;transition:width .3s}
+#progress-text{font-size:13px;color:var(--text)}
+#runlog{margin-top:12px;max-height:240px;overflow-y:auto;font-size:12px;font-family:monospace;background:#0c0c0c;border:1px solid var(--border);border-radius:8px;padding:10px}
+.logline{padding:2px 0}
+.logline.ok{color:var(--green)}
+.logline.err{color:var(--red)}
+
+#toast{position:fixed;bottom:20px;right:20px;background:var(--s3);border:1px solid var(--gold-d);color:var(--text);padding:10px 16px;border-radius:8px;font-size:13px;transform:translateY(60px);opacity:0;transition:.3s;z-index:999;max-width:320px}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.err{border-color:var(--red)}
+.loading{display:flex;align-items:center;justify-content:center;padding:20px;color:var(--muted);gap:10px;font-size:13px}
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-screen">
+  <div class="login-logo">💎 JS Jewelry</div>
+  <button class="btn-login" onclick="signIn()">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+    เข้าสู่ระบบด้วย Google
+  </button>
+</div>
+
+<!-- App -->
+<div id="app-screen">
+  <header>
+    <div class="logo">💎 JS Jewelry<span>อัปรูปหลายรหัส (Bulk Upload)</span></div>
+    <div class="header-actions">
+      <a href="index.html" class="back-btn">← หน้าหลัก</a>
+      <button class="btn-signout" onclick="signOut()">ออกจากระบบ</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="card">
+      <div class="card-title">📁 เลือกโฟลเดอร์รูป</div>
+      <div class="hint" style="margin-bottom:14px">
+        โครงสร้าง: โฟลเดอร์ย่อย <b>1 โฟลเดอร์ = 1 รหัสสินค้า</b> (ชื่อโฟลเดอร์ = รหัส เช่น <code>SR1079</code>)
+        ข้างในใส่รูป <code>1.jpg</code> = รูปหลัก, <code>2.jpg</code> / <code>3.jpg</code> = รูปเพิ่มเติม (เรียงตามชื่อไฟล์ ใช้ 3 รูปแรก)<br>
+        เลือก<b>โฟลเดอร์แม่</b>ที่รวมโฟลเดอร์ย่อยเหล่านี้ได้เลย (เช่น <code>แหวน SR</code>) ระบบจะอ่านทุกตัวให้
+      </div>
+      <div class="pick">
+        <label class="file-label disabled" id="picker">📂 เลือกโฟลเดอร์
+          <input type="file" id="folder" webkitdirectory directory multiple onchange="onFolderPick(this)" disabled>
+        </label>
+        <label class="switch"><input type="checkbox" id="overwrite" onchange="renderPreview()"> เขียนทับรูปเดิม (ถ้าปิด = ข้ามรหัสที่มีรูปแล้ว)</label>
+      </div>
+      <div id="status"><div class="loading"><div class="spinner"></div>กำลังโหลดรายการสินค้า…</div></div>
+    </div>
+
+    <div class="card" id="preview-card" style="display:none">
+      <div class="card-title">🔎 ตรวจก่อนอัป</div>
+      <div id="summary"></div>
+      <div class="tw" id="ptable"></div>
+    </div>
+
+    <div class="card" id="run-card" style="display:none">
+      <div class="card-title">☁️ อัปโหลด</div>
+      <button class="btn bg" id="btn-run" onclick="runUpload()" disabled>🚀 เริ่มอัปโหลด</button>
+      <div class="progress-wrap">
+        <div class="bar-bg"><div id="bar"></div></div>
+        <div id="progress-text"></div>
+      </div>
+      <div id="runlog" style="display:none"></div>
+    </div>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/sheets-api.js"></script>
+<script src="js/drive-api.js"></script>
+<script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+<script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+
+<script>
+let allProducts = [];
+let groups = [];
+let running = false;
+const IMG_RE = /\.(jpe?g|png|webp)$/i;
+
+// เรียกหลังล็อกอินสำเร็จ (auth.js)
+async function onAppReady(){
+  try {
+    allProducts = await sheetsGetAllProducts();
+    setStatus(`พร้อมแล้ว — มีสินค้าในระบบ ${allProducts.length.toLocaleString('th-TH')} รายการ · เลือกโฟลเดอร์แม่เพื่อเริ่ม`);
+    document.getElementById('folder').disabled = false;
+    document.getElementById('picker').classList.remove('disabled');
+  } catch(e){
+    setStatus('โหลดรายการสินค้าไม่สำเร็จ: ' + e.message);
+  }
+}
+
+function setStatus(t){ document.getElementById('status').textContent = t; }
+
+function onFolderPick(input){
+  const files = [...input.files].filter(f => IMG_RE.test(f.name));
+  const map = {};
+  for (const f of files){
+    const rel = f.webkitRelativePath || f.name;
+    const parts = rel.split('/');
+    if (parts.length < 2) continue;           // ต้องอยู่ในโฟลเดอร์ย่อย
+    const sku = parts[parts.length - 2].trim(); // โฟลเดอร์ที่ห่อไฟล์ = รหัส
+    if (!sku) continue;
+    (map[sku] = map[sku] || []).push(f);
+  }
+  groups = Object.keys(map).map(sku => {
+    const fs = map[sku].sort((a,b) => a.name.localeCompare(b.name, undefined, {numeric:true, sensitivity:'base'}));
+    const product = allProducts.find(p => p.sku === sku);
+    const hasMain = !!(product && product.imageUrl && String(product.imageUrl).trim());
+    return { sku, files: fs.slice(0,3), totalFiles: fs.length, exists: !!product, hasMain, product };
+  }).sort((a,b) => a.sku.localeCompare(b.sku, undefined, {numeric:true}));
+
+  document.getElementById('preview-card').style.display = groups.length ? 'block' : 'none';
+  document.getElementById('run-card').style.display = groups.length ? 'block' : 'none';
+  if (!groups.length){ setStatus('ไม่พบไฟล์รูปในโฟลเดอร์ย่อย — ตรวจว่าโครงสร้างเป็น โฟลเดอร์รหัส/รูป.jpg'); return; }
+  setStatus(`อ่านโฟลเดอร์แล้ว: เจอ ${groups.length} รหัส`);
+  renderPreview();
+}
+
+function willDo(g, overwrite){ return g.exists && g.files.length > 0 && (overwrite || !g.hasMain); }
+
+function renderPreview(){
+  if (!groups.length) return;
+  const overwrite = document.getElementById('overwrite').checked;
+  const notFound = groups.filter(g => !g.exists).length;
+  const skipHasImg = groups.filter(g => g.exists && g.hasMain && !overwrite).length;
+  const todo = groups.filter(g => willDo(g, overwrite));
+
+  document.getElementById('summary').innerHTML =
+    `เจอโฟลเดอร์ <b>${groups.length}</b> · จะอัป <b style="color:var(--green)">${todo.length}</b> รหัส` +
+    ` · ข้าม(มีรูปแล้ว) <b>${skipHasImg}</b> · ไม่พบในระบบ <b style="color:var(--red)">${notFound}</b>`;
+  document.getElementById('btn-run').disabled = todo.length === 0 || running;
+
+  const rows = groups.map(g => {
+    let st, cls;
+    if (!g.exists){ st = '❌ ไม่พบในระบบ'; cls = 'st-no'; }
+    else if (g.hasMain && !overwrite){ st = '⏭️ มีรูปแล้ว (ข้าม)'; cls = 'st-skip'; }
+    else { st = '✅ จะอัป ' + g.files.length + ' รูป'; cls = 'st-go'; }
+    const extra = g.totalFiles > 3 ? ` <small style="color:var(--muted)">(จาก ${g.totalFiles})</small>` : '';
+    return `<tr><td><b>${g.sku}</b></td><td>${g.exists ? (g.product.name || '') : '—'}</td>` +
+           `<td style="text-align:center">${g.files.length}${extra}</td><td class="${cls}">${st}</td></tr>`;
+  }).join('');
+  document.getElementById('ptable').innerHTML =
+    `<table><thead><tr><th>รหัส</th><th>ชื่อสินค้า</th><th>รูป</th><th>สถานะ</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+async function runUpload(){
+  if (running) return;
+  const overwrite = document.getElementById('overwrite').checked;
+  const todo = groups.filter(g => willDo(g, overwrite));
+  if (!todo.length) return;
+  if (!confirm(`ยืนยันอัปรูปให้ ${todo.length} รหัส?\n(ระหว่างอัปอย่าปิดหน้านี้)`)) return;
+
+  running = true;
+  document.getElementById('btn-run').disabled = true;
+  document.getElementById('folder').disabled = true;
+  document.getElementById('picker').classList.add('disabled');
+  const log = document.getElementById('runlog');
+  log.style.display = 'block';
+  log.innerHTML = '';
+  let ok = 0, fail = 0;
+
+  for (let n = 0; n < todo.length; n++){
+    const g = todo[n];
+    setProgress(n, todo.length, g.sku);
+    try {
+      const urls = [];
+      for (let i = 0; i < g.files.length; i++){
+        const c = await compressImage(g.files[i]);
+        urls[i] = await driveUploadImage(c, g.sku + (i > 0 ? '_' + (i + 1) : ''));
+      }
+      const p = g.product;
+      p.imageUrl = urls[0] || '';
+      p.image2   = urls[1] || '';
+      p.image3   = urls[2] || '';
+      await sheetsUpdateProduct(p);
+      g.hasMain = true;
+      ok++;
+      addLog(`✅ ${g.sku} — อัป ${urls.length} รูป`, 'ok');
+    } catch(e){
+      fail++;
+      addLog(`❌ ${g.sku} — ${e.message}`, 'err');
+      console.error(g.sku, e);
+    }
+  }
+
+  document.getElementById('bar').style.width = '100%';
+  document.getElementById('progress-text').textContent = `เสร็จสิ้น — สำเร็จ ${ok} · ผิดพลาด ${fail}`;
+  showToast(`อัปเสร็จ: สำเร็จ ${ok} · ผิดพลาด ${fail}`);
+  running = false;
+  document.getElementById('folder').disabled = false;
+  document.getElementById('picker').classList.remove('disabled');
+  renderPreview();
+}
+
+function setProgress(done, total, sku){
+  const pct = total ? Math.round(done / total * 100) : 0;
+  document.getElementById('bar').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = sku ? `กำลังทำ ${done + 1}/${total}: ${sku} …` : `${done}/${total}`;
+}
+
+function addLog(msg, cls){
+  const d = document.createElement('div');
+  d.className = 'logline ' + cls;
+  d.textContent = msg;
+  const log = document.getElementById('runlog');
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+}
+
+function showToast(msg, type=''){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (type === 'error' ? ' err' : '');
+  setTimeout(() => t.className = '', 3500);
+}
+</script>
+</body>
+</html>

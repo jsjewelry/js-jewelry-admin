@@ -688,6 +688,17 @@ function setView(v) {
   renderProducts();
 }
 
+// แปลงลิงก์ Google Drive ให้รูปโชว์ได้ (เหมือนหน้า catalog/add-product)
+function normalizeImgUrl(url) {
+  if (!url) return '';
+  url = String(url).trim();
+  if (url.includes('drive.google.com')) {
+    const m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/) || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (m) return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w800`;
+  }
+  return url;
+}
+
 function renderProducts() {
   const q = document.getElementById('search').value.toLowerCase();
   const cat = document.getElementById('filter-cat').value;
@@ -706,7 +717,7 @@ function renderProducts() {
   if (viewMode === 'grid') {
     el.innerHTML = '<div class="prod-grid">' + list.map(p => `
       <div class="prod-card" onclick="openDetail('${p.sku}')">
-        <div class="prod-img">${(p.imageUrl||p.image2||p.image3) ? `<img src="${p.imageUrl||p.image2||p.image3}" alt="${p.name}" onerror="this.parentElement.innerHTML='💍'">` : '💍'}</div>
+        <div class="prod-img">${(p.imageUrl||p.image2||p.image3) ? `<img src="${normalizeImgUrl(p.imageUrl||p.image2||p.image3)}" alt="${p.name}" onerror="this.parentElement.innerHTML='💍'">` : '💍'}</div>
         <div class="prod-info">
           <div class="prod-meta" style="color:var(--muted);font-size:11px">${p.sku}</div>
           <div class="prod-name">${p.name}</div>
@@ -722,7 +733,7 @@ function renderProducts() {
   } else {
     el.innerHTML = '<div class="tw"><table><thead><tr><th></th><th>รหัส</th><th>ชื่อสินค้า</th><th>ประเภท</th><th>วัสดุ</th><th>ราคาขาย</th><th>สต็อก</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody>' +
       list.map(p => `<tr class="clickable" onclick="openDetail('${p.sku}')">
-        <td>${(p.imageUrl||p.image2||p.image3) ? `<img src="${p.imageUrl||p.image2||p.image3}" class="tbl-img" onerror="this.src=''">` : '<div class="tbl-img" style="display:flex;align-items:center;justify-content:center;font-size:18px">💍</div>'}</td>
+        <td>${(p.imageUrl||p.image2||p.image3) ? `<img src="${normalizeImgUrl(p.imageUrl||p.image2||p.image3)}" class="tbl-img" onerror="this.src=''">` : '<div class="tbl-img" style="display:flex;align-items:center;justify-content:center;font-size:18px">💍</div>'}</td>
         <td><strong>${p.sku}</strong></td>
         <td>${p.name}</td>
         <td>${p.category}</td>
@@ -873,7 +884,7 @@ function openDetail(sku) {
   document.getElementById('dm-body').innerHTML = `
     <div>
       <div class="dm-img">${(p.imageUrl||p.image2||p.image3)
-        ? `<img src="${p.imageUrl||p.image2||p.image3}" alt="${p.name}" onerror="this.parentElement.innerHTML='💍'">`
+        ? `<img src="${normalizeImgUrl(p.imageUrl||p.image2||p.image3)}" alt="${p.name}" onerror="this.parentElement.innerHTML='💍'">`
         : '💍'}</div>
       <div style="margin-top:10px;text-align:center">
         <span class="badge ${p.stock === 0 ? 'b-out' : 'b-ready'}">${p.status}</span>

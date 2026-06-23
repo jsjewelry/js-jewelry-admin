@@ -340,9 +340,20 @@ function handleImgSelect(input, idx) {
   reader.readAsDataURL(f);
 }
 
+// แปลงลิงก์ Google Drive (/file/d/ID/view, open?id=ID ฯลฯ) → ลิงก์รูปตรงที่โชว์ได้
+function normalizeImgUrl(url) {
+  if (!url) return '';
+  url = String(url).trim();
+  if (url.includes('drive.google.com')) {
+    const m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/) || url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (m) return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w800`;
+  }
+  return url;
+}
+
 function previewUrl(url, idx) {
   if (!url) return;
-  renderImg(idx, url, true);
+  renderImg(idx, normalizeImgUrl(url), true);
 }
 
 function clearImg(idx) {
@@ -443,9 +454,9 @@ async function saveProduct() {
 
     // อัปโหลดรูปถ้ามีไฟล์ใหม่ (รองรับ 3 รูป: หลัก + อีก 2)
     const imageUrls = [
-      document.getElementById('p-imgurl-0').value.trim(),
-      document.getElementById('p-imgurl-1').value.trim(),
-      document.getElementById('p-imgurl-2').value.trim()
+      normalizeImgUrl(document.getElementById('p-imgurl-0').value),
+      normalizeImgUrl(document.getElementById('p-imgurl-1').value),
+      normalizeImgUrl(document.getElementById('p-imgurl-2').value)
     ];
     for (let i = 0; i < 3; i++) {
       if (selectedFiles[i]) {

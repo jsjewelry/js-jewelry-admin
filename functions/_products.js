@@ -1,12 +1,10 @@
 // Shared product data + rendering for JS Jewelry per-product SEO pages.
-// Used by Cloudflare Pages Functions: functions/p/[sku].js and functions/sitemap-products.xml.js
 export const SHEET_ID = '1Tk53rhDhYRxTkGpXvbd55hMYlTJ83stwG0H3yoZrMDo';
 export const SITE = 'https://jsjewelry.pages.dev';
 export const LINE_URL = 'https://line.me/R/oaMessage/%40888zbakd/?';
 
-// Column indices (0-based) — matches catalog.html
-const COL = { sku:1,name:2,category:3,material:4,weight:5,gemType:6,gemWeight:7,sellPrice:9,status:11,imageUrl:12,notes:13,size:15,highlight:16,promoPrice:19,imageUrl2:20,imageUrl3:21 };
-const GEM = { code:1,gemType:2,weight:3,shape:4,size:5,pricePerCt:6,status:8,notes:9,imageUrl:11,origin:12,pieces:13,promoPrice:15 };
+const COL = { sku:1,name:2,category:3,material:4,weight:5,gemType:6,gemWeight:7,sellPrice:9,status:11,imageUrl:12,notes:13,size:15,highlight:16,videoUrl:18,promoPrice:19,imageUrl2:20,imageUrl3:21 };
+const GEM = { code:1,gemType:2,weight:3,shape:4,size:5,pricePerCt:6,status:8,notes:9,imageUrl:11,origin:12,pieces:13,videoUrl:14,promoPrice:15 };
 const CAT_EMOJI = { 'แหวน':'💍','ต่างหู':'✨','จี้':'🔮','กำไล':'📿','สร้อยข้อมือ':'🌟','สร้อยคอ':'💎','พลอย':'💠' };
 
 export function parseCSVRow(row){
@@ -28,7 +26,7 @@ export function mapRows(prodRows, gemRows){
     sellPrice:parseFloat(r[COL.sellPrice])||0, status:r[COL.status]||'', imageUrl:r[COL.imageUrl]||'',
     notes:r[COL.notes]||'', size:r[COL.size]||'', highlight:r[COL.highlight]||'',
     promoPrice:parseFloat(r[COL.promoPrice])||0, imageUrl2:r[COL.imageUrl2]||'', imageUrl3:r[COL.imageUrl3]||'',
-    shape:'', origin:'', pieces:0, pricePerCt:0,
+    videoUrl:r[COL.videoUrl]||'', shape:'', origin:'', pieces:0, pricePerCt:0,
   }));
   const gems = (gemRows||[]).map(r=>{
     const wt=parseFloat(r[GEM.weight])||0, ppc=parseFloat(r[GEM.pricePerCt])||0;
@@ -36,7 +34,7 @@ export function mapRows(prodRows, gemRows){
       gemType:'', gemWeight:r[GEM.weight]||'', shape:r[GEM.shape]||'', origin:r[GEM.origin]||'',
       pricePerCt:ppc, sellPrice:Math.round(ppc*wt), status:r[GEM.status]||'', imageUrl:r[GEM.imageUrl]||'',
       notes:r[GEM.notes]||'', size:r[GEM.size]||'', pieces:Number(r[GEM.pieces])||1,
-      promoPrice:parseFloat(r[GEM.promoPrice])||0, highlight:'', imageUrl2:'', imageUrl3:'' };
+      promoPrice:parseFloat(r[GEM.promoPrice])||0, videoUrl:r[GEM.videoUrl]||'', highlight:'', imageUrl2:'', imageUrl3:'' };
   });
   return [...products, ...gems].filter(p=>p.sku && p.name && p.status!=='สินค้าหมด' && p.status!=='หมดสต็อก' && p.status!=='หยุดขาย');
 }
@@ -71,6 +69,7 @@ export function renderProductPage(p){
   const off = promo ? Math.round((1-p.promoPrice/p.sellPrice)*100) : 0;
   const url = `${SITE}/p/${encodeURIComponent(p.sku)}`;
   const inStock = p.status==='พร้อมขาย';
+  const vurl = (p.videoUrl||'').trim();
   const desc = (p.highlight && p.highlight.trim() && p.highlight.trim()!=='-') ? p.highlight.trim()
              : (p.notes && p.notes.trim()!=='-' ? p.notes.trim() : '');
   const metaDesc = (`${p.name}${p.material?(' '+p.material):''}${p.gemType?(' พลอย'+p.gemType):''} ราคา ${fmtPrice(price)} — JS Jewelry เครื่องประดับเงินแท้ 925 & พลอยแท้ พร้อมส่ง สั่งซื้อผ่าน LINE`+(desc?(' · '+desc):'')).replace(/\s+/g,' ').trim().slice(0,300);
@@ -100,6 +99,11 @@ export function renderProductPage(p){
 
   const title = `${p.name} (${p.sku}) | JS Jewelry เงินแท้ 925`;
   const lineMsg = `สนใจสินค้า ${p.sku}`;
+  const thumbs = imgs.length>1 ? `<div class="thumbs">${imgs.map(u=>`<img src="${esc(u)}" alt="${esc(p.name)}" onclick="document.querySelector('.main').src=this.src" loading="lazy">`).join('')}</div>` : '';
+  const priceHtml = promo ? `<span class="old">${fmtPrice(p.sellPrice)}</span><span class="price promo">${fmtPrice(price)}</span><span class="badge">-${off}%</span>` : `<span class="price">${fmtPrice(price)}</span>`;
+  const rowsHtml = rows.map(([l,v])=>`<div class="row"><span class="l">${esc(l)}</span><span class="v">${esc(v)}</span></div>`).join('');
+  const descHtml = desc ? `<div class="desc">${esc(desc)}</div>` : '';
+  const videoHtml = vurl ? `<a class="video-btn" href="${esc(vurl)}" target="_blank" rel="noopener">▶ ดูวิดีโอ</a>` : '';
 
   return `<!DOCTYPE html>
 <html lang="th">
@@ -148,6 +152,7 @@ h1{font-size:24px;font-weight:700;line-height:1.3;margin-bottom:4px}
 .row .v{color:var(--t1);font-weight:500;flex:1}
 .desc{font-size:14px;color:var(--t2);background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;white-space:pre-line}
 .line-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:10px;background:#06C755;color:#fff;font-weight:700;font-size:15px;margin-bottom:10px}
+.video-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border-radius:10px;background:#C0271E;color:#fff;font-weight:700;font-size:15px;margin-bottom:10px}
 .back{display:inline-block;font-size:13px;color:var(--gold-d);font-weight:600}
 .footer{background:linear-gradient(135deg,#2B1A0E,#3E2A1A);color:rgba(255,255,255,.4);text-align:center;padding:22px;font-size:12px;letter-spacing:.5px}.footer span{color:var(--gold)}
 </style>
@@ -159,19 +164,20 @@ h1{font-size:24px;font-weight:700;line-height:1.3;margin-bottom:4px}
 <div class="grid">
   <div>
     <img class="main" src="${esc(mainImg)}" alt="${esc(p.name+' '+(p.material||'')+' JS Jewelry')}">
-    ${imgs.length>1?`<div class="thumbs">${imgs.map(u=>`<img src="${esc(u)}" alt="${esc(p.name)}" onclick="document.querySelector('.main').src=this.src" loading="lazy">`).join('')}</div>`:''}
+    ${thumbs}
   </div>
   <div>
     <div class="cat">${emoji} ${esc(p.category)}</div>
     <h1>${esc(p.name)}</h1>
     <div class="sku">รหัสสินค้า: ${esc(p.sku)}</div>
     <div class="price-box">
-      ${promo?`<span class="old">${fmtPrice(p.sellPrice)}</span><span class="price promo">${fmtPrice(price)}</span><span class="badge">-${off}%</span>`:`<span class="price">${fmtPrice(price)}</span>`}
+      ${priceHtml}
       <div><span class="status">${inStock?'✓ พร้อมขาย':esc(p.status)}</span></div>
     </div>
-    <div class="rows">${rows.map(([l,v])=>`<div class="row"><span class="l">${esc(l)}</span><span class="v">${esc(v)}</span></div>`).join('')}</div>
-    ${desc?`<div class="desc">${esc(desc)}</div>`:''}
+    <div class="rows">${rowsHtml}</div>
+    ${descHtml}
     <a class="line-btn" href="${LINE_URL}${encodeURIComponent(lineMsg)}" target="_blank" rel="noopener">💬 สอบถาม / สั่งซื้อทาง LINE</a>
+    ${videoHtml}
     <a class="back" href="/catalog">← ดูสินค้าอื่นทั้งหมด</a>
   </div>
 </div>
@@ -182,7 +188,7 @@ h1{font-size:24px;font-weight:700;line-height:1.3;margin-bottom:4px}
 }
 
 export function render404(sku){
-  return `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ไม่พบสินค้า | JS Jewelry</title><meta name="robots" content="noindex"><style>body{font-family:'Sarabun',sans-serif;text-align:center;padding:80px 20px;color:#333}a{color:#8A6D2F;font-weight:600}</style></head><body><h1>ไม่พบสินค้า ${esc(sku)}</h1><p>อาจถูกขายไปแล้ว หรือรหัสไม่ถูกต้อง</p><p><a href="/catalog">← กลับไปหน้ารวมสินค้า</a></p></body></html>`;
+  return `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>ไม่พบสินค้า | JS Jewelry</title><meta name="robots" content="noindex"><style>body{font-family:'Sarabun',sans-serif;text-align:center;padding:80px 20px;color:#333}a{color:#8A6D2F;font-weight:600}</style></head><body><h1>ไม่พบสินค้า ${esc(sku)}</h1><p>อาจถูกขายไปแล้ว หรือรหัสไม่ถูกต้อง</p><p><a href="/catalog">← กลับไปหน้ารวมสินค้า</a></p></body></html>`;
 }
 
 export function buildProductSitemap(products){

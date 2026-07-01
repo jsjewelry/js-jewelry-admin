@@ -74,6 +74,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .nav-search input::placeholder { color: rgba(255,255,255,0.3); }
 .nav-search input:focus { background: rgba(255,255,255,0.13); border-color: rgba(201,168,76,0.6); }
 .nav-count { color: rgba(255,255,255,0.4); font-size: 12px; white-space: nowrap; }
+.nav-articles { color: var(--gold); font-weight: 600; font-size: 13px; white-space: nowrap; text-decoration: none; padding: 6px 12px; border: 1px solid rgba(201,168,76,0.45); border-radius: 8px; transition: all var(--ease); }
+.nav-articles:hover { background: rgba(201,168,76,0.15); border-color: var(--gold); }
 
 /* ── Filter Bar ── */
 .filter-bar {
@@ -373,6 +375,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     <span class="nav-search-icon">🔍</span>
     <input type="text" id="js-search" placeholder="ค้นหาสินค้า รหัส หรือวัสดุ…" autocomplete="off">
   </div>
+  <a class="nav-articles" href="/article/">📖 บทความ</a>
   <span class="nav-count" id="js-nav-count"></span>
 </header>
 

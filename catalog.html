@@ -344,8 +344,11 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* ── Responsive ── */
 @media (max-width: 600px) {
-  .nav { padding: 0 16px; gap: 10px; height: 56px; }
+  .nav { position: static; padding: 8px 14px; gap: 8px 10px; height: auto; flex-wrap: wrap; }
+  .nav-articles { margin-left: auto; }
+  .nav-search { order: 5; flex-basis: 100%; max-width: none; margin-left: 0; }
   .nav-count { display: none; }
+  .filter-bar { top: 0; }
   .filter-inner { padding: 10px 16px; }
   .catalog-wrap { padding: 16px 14px 70px; }
   .modal-body { padding: 18px 20px 24px; }

@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JS Jewelry — ระบบฝากขาย</title>
+<meta name="robots" content="noindex,nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#C9A84C;--gold-l:#E8C97A;--gold-d:#8A6D2F;--gold-bg:#FBF7EE;--bg:#FAFAFA;--surface:#FFF;--border:rgba(0,0,0,.08);--t1:#1A1A1A;--t2:#6B6B6B;--t3:#ABABAB;--red:#C0271E;--green:#2d7a50;--radius:14px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--t1);min-height:100vh}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,textarea,select{font-family:inherit;font-size:14px}
+.nav{position:sticky;top:0;z-index:100;background:linear-gradient(135deg,#2B1A0E,#3E2A1A 55%,#4A3220);border-bottom:1px solid rgba(201,168,76,.35);height:60px;padding:0 22px;display:flex;align-items:center;gap:14px}
+.nav-brand{color:var(--gold);font-weight:700;font-size:16px;letter-spacing:1.5px;white-space:nowrap}
+.nav-sub{font-size:10px;color:rgba(255,255,255,.4);font-weight:400;display:block}
+.nav a.nav-link{color:rgba(255,255,255,.65);font-size:13px;text-decoration:none;padding:6px 12px;border:1px solid rgba(255,255,255,.15);border-radius:8px}
+.nav a.nav-link:hover{color:var(--gold-l);border-color:rgba(201,168,76,.5)}
+.nav .spacer{flex:1}
+.btn{padding:9px 18px;border-radius:9px;font-size:13px;font-weight:700;transition:opacity .2s;letter-spacing:.3px}
+.btn:hover{opacity:.88}
+.btn-gold{background:var(--gold);color:#111}
+.btn-dark{background:#333;color:#fff}
+.btn-green{background:var(--green);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn-outline{border:1px solid var(--border);color:var(--t2);background:var(--surface)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:18px;text-align:center;padding:20px}
+#login-screen h1{font-size:22px;color:var(--gold-d)}
+#login-screen p{color:var(--t2);font-size:14px}
+.wrap{max-width:1250px;margin:0 auto;padding:22px 22px 80px}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.panel h2{font-size:16px;font-weight:700;color:var(--gold-d);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.form-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.form-col{flex:1;min-width:220px}
+label{display:block;font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px}
+input[type=text],textarea,select{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:9px;outline:none;background:#fff}
+input[type=text]:focus,textarea:focus{border-color:var(--gold)}
+textarea{min-height:84px;resize:vertical}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--gold-bg);color:var(--gold-d);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:8px 9px;text-align:left;border-bottom:1px solid rgba(201,168,76,.3);white-space:nowrap}
+td{padding:7px 9px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:var(--gold-bg)}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:5px}
+.tag-ok{background:rgba(92,186,125,.13);color:var(--green)}
+.tag-warn{background:rgba(230,160,30,.15);color:#9a6b00}
+.tag-err{background:rgba(192,39,30,.1);color:var(--red)}
+.thumb{width:44px;height:44px;object-fit:cover;border-radius:7px;border:1px solid var(--border);background:var(--gold-bg)}
+.shop-head{display:flex;align-items:center;gap:10px;margin:18px 0 8px;flex-wrap:wrap}
+.shop-head h3{font-size:15px;color:var(--t1)}
+.shop-head .cnt{font-size:12px;color:var(--t3)}
+.muted{color:var(--t3);font-size:13px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:11px 22px;border-radius:10px;font-size:13px;z-index:999;display:none;max-width:90vw}
+#toast.err{background:var(--red)}
+#toast.ok{background:var(--green)}
+.tbl-wrap{overflow-x:auto}
+.summary-chip{background:var(--gold-bg);border:1px solid rgba(201,168,76,.3);border-radius:9px;padding:8px 14px;font-size:13px;color:var(--gold-d);font-weight:600}
+@media(max-width:600px){.nav{padding:0 12px;gap:8px}.wrap{padding:14px 12px 60px}.panel{padding:14px}}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <h1>💎 JS Jewelry — ระบบฝากขาย</h1>
+  <p>เข้าสู่ระบบด้วย Google Account เพื่อจัดการสินค้าฝากขาย</p>
+  <button class="btn btn-gold" onclick="signIn()">เข้าสู่ระบบด้วย Google</button>
+</div>
+
+<div id="app-screen" style="display:none">
+<header class="nav">
+  <span class="nav-brand">💎 JS Jewelry<span class="nav-sub">ระบบฝากขาย · CONSIGNMENT</span></span>
+  <span class="spacer"></span>
+  <a class="nav-link" href="index.html">🏠 Admin</a>
+  <button class="btn btn-dark" onclick="signOut()">ออกจากระบบ</button>
+</header>
+<main class="wrap">
+
+  <!-- ═══ ส่งฝากขาย ═══ -->
+  <div class="panel">
+    <h2>📤 ส่งสินค้าไปฝากขาย</h2>
+    <div class="form-row">
+      <div class="form-col">
+        <label>ชื่อร้านที่ฝากขาย *</label>
+        <input type="text" id="shop-name" list="shop-list" placeholder="เช่น ร้านป้าแดง ตลาดพลอย">
+        <datalist id="shop-list"></datalist>
+      </div>
+      <div class="form-col" style="flex:2">
+        <label>รหัสสินค้า (SKU) — วางได้หลายตัว คั่นด้วยเว้นวรรค คอมมา หรือขึ้นบรรทัดใหม่</label>
+        <textarea id="sku-input" placeholder="SR0010, SR0024&#10;SE0005 SE0012"></textarea>
+      </div>
+    </div>
+    <button class="btn btn-gold" onclick="previewConsign()">🔍 ตรวจสอบรายการ</button>
+    <div id="preview-area" style="margin-top:14px"></div>
+  </div>
+
+  <!-- ═══ รายการฝากขาย ═══ -->
+  <div class="panel">
+    <h2>📋 รายการฝากขายปัจจุบัน</h2>
+    <div class="toolbar">
+      <select id="filter-shop" style="width:auto;min-width:170px" onchange="renderList()"></select>
+      <button class="btn btn-outline" onclick="reloadAll()">🔄 โหลดใหม่</button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn btn-red" id="btn-return" onclick="returnSelected()" disabled>↩ รับคืนที่เลือก</button>
+      <button class="btn btn-outline" onclick="exportPDF()">📄 รายงาน PDF</button>
+      <button class="btn btn-green" onclick="exportExcel()">📊 รายงาน Excel</button>
+    </div>
+    <div id="consign-list"><p class="muted">กำลังโหลด…</p></div>
+  </div>
+
+</main>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script>
+/* ═══ CONFIG ═══ */
+const CONFIG = {
+  CLIENT_ID: '725893335045-4mhpfppohrm2tg7guaq3c1q7no3dlaki.apps.googleusercontent.com',
+  SHEET_ID:  '1Tk53rhDhYRxTkGpXvbd55hMYlTJ83stwG0H3yoZrMDo',
+  SHEET:     'Products',
+  SCOPES:    'https://www.googleapis.com/auth/spreadsheets',
+  IMG_PROXY: 'https://jsjewelry.pages.dev/img/'
+};
+// Products columns (0-based): W(22) = consignment
+const COL = { sku:1,name:2,category:3,material:4,weight:5,gemType:6,gemWeight:7,sellPrice:9,stock:10,status:11,imageUrl:12,notes:13,promoPrice:19,consignment:22 };
+
+/* ═══ AUTH (Google Identity Services) ═══ */
+let tokenClient=null, accessToken=null, gapiReady=false, gisReady=false;
+function gapiLoaded(){ gapi.load('client', async ()=>{ await gapi.client.init({}); await gapi.client.load('https://sheets.googleapis.com/$discovery/rest?version=v4'); gapiReady=true; maybeRender(); }); }
+function gisLoaded(){ tokenClient = google.accounts.oauth2.initTokenClient({ client_id:CONFIG.CLIENT_ID, scope:CONFIG.SCOPES, callback:handleToken }); gisReady=true; maybeRender(); }
+function maybeRender(){
+  if(!(gapiReady&&gisReady)) return;
+  const saved = sessionStorage.getItem('gapi_token');
+  if(saved){ try{ const t=JSON.parse(saved); if(t.expires_at>Date.now()){ accessToken=t.access_token; gapi.client.setToken({access_token:accessToken}); showApp(); return; } }catch(e){} }
+  showLogin();
+}
+function handleToken(resp){
+  if(resp.error){ toast('เข้าสู่ระบบไม่สำเร็จ: '+resp.error,'err'); return; }
+  accessToken=resp.access_token;
+  gapi.client.setToken({access_token:accessToken});
+  sessionStorage.setItem('gapi_token', JSON.stringify({access_token:accessToken, expires_at:Date.now()+(resp.expires_in-60)*1000}));
+  showApp();
+}
+function signIn(){ if(tokenClient) tokenClient.requestAccessToken({prompt:''}); }
+function signOut(){ if(accessToken){ google.accounts.oauth2.revoke(accessToken); accessToken=null; } gapi.client.setToken(null); sessionStorage.removeItem('gapi_token'); showLogin(); }
+function showApp(){ document.getElementById('login-screen').style.display='none'; document.getElementById('app-screen').style.display='block'; reloadAll(); }
+function showLogin(){ document.getElementById('login-screen').style.display='flex'; document.getElementById('app-screen').style.display='none'; }
+
+/* ═══ HELPERS ═══ */
+function toast(msg,type){ const el=document.getElementById('toast'); el.textContent=msg; el.className=type||''; el.style.display='block'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none', 4200); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtN(n){ return n ? Number(n).toLocaleString('th-TH') : ''; }
+function getImgId(url){ if(!url) return ''; let m;
+  if((m=url.match(/\/d\/([a-zA-Z0-9_-]{10,})/))) return m[1];
+  if((m=url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/))) return m[1];
+  return ''; }
+function imgSrc(url){ const id=getImgId(url); return id ? CONFIG.IMG_PROXY+id : url; }
+function nowTH(){ return new Date().toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'}); }
+
+/* ═══ DATA ═══ */
+let products = []; // {row, sku, name, ..., consignment}
+async function loadProducts(){
+  const resp = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId:CONFIG.SHEET_ID, range:CONFIG.SHEET+'!A:W' });
+  const rows = resp.result.values || [];
+  products = rows.slice(1).map((r,i)=>({
+    row:i+2,
+    sku:(r[COL.sku]||'').trim(), name:r[COL.name]||'', category:r[COL.category]||'',
+    material:r[COL.material]||'', weight:r[COL.weight]||'', gemType:r[COL.gemType]||'', gemWeight:r[COL.gemWeight]||'',
+    sellPrice:Number(r[COL.sellPrice]||0), promoPrice:Number(r[COL.promoPrice]||0),
+    notes:r[COL.notes]||'', stock:Number(r[COL.stock]||0), status:r[COL.status]||'',
+    imageUrl:r[COL.imageUrl]||'', consignment:(r[COL.consignment]||'').trim()
+  })).filter(p=>p.sku);
+}
+function consigned(shop){ return products.filter(p=>p.consignment && (!shop||shop==='all'||p.consignment===shop)); }
+function shopNames(){ return [...new Set(consigned().map(p=>p.consignment))].sort(); }
+
+async function reloadAll(){
+  try{
+    document.getElementById('consign-list').innerHTML='<p class="muted">กำลังโหลด…</p>';
+    await loadProducts();
+    buildShopUI(); renderList();
+  }catch(e){ console.error(e); toast('โหลดข้อมูลไม่สำเร็จ: '+(e.result?.error?.message||e.message||e),'err'); }
+}
+function buildShopUI(){
+  const shops = shopNames();
+  document.getElementById('shop-list').innerHTML = shops.map(s=>`<option value="${esc(s)}">`).join('');
+  const sel = document.getElementById('filter-shop');
+  const cur = sel.value || 'all';
+  sel.innerHTML = `<option value="all">🏪 ทุกร้าน (${consigned().length} ชิ้น)</option>` + shops.map(s=>`<option value="${esc(s)}">${esc(s)} (${consigned(s).length})</option>`).join('');
+  sel.value = shops.includes(cur)||cur==='all' ? cur : 'all';
+}
+
+/* ═══ ส่งฝากขาย: PREVIEW + CONFIRM ═══ */
+let previewOk = [];
+function previewConsign(){
+  const shop = document.getElementById('shop-name').value.trim();
+  const raw  = document.getElementById('sku-input').value.trim();
+  const area = document.getElementById('preview-area');
+  previewOk = [];
+  if(!shop || !raw){ area.innerHTML='<p class="muted">⚠️ กรอกชื่อร้านและรหัสสินค้าก่อนค่ะ</p>'; return; }
+  const skus = [...new Set(raw.split(/[\s,;]+/).filter(Boolean))];
+  const rows = skus.map(sku=>{
+    const p = products.find(x=>x.sku.toLowerCase()===sku.toLowerCase());
+    if(!p) return {sku, st:'err', msg:'ไม่พบในระบบ'};
+    if(p.consignment) return {sku:p.sku, p, st:'warn', msg:'ฝากขายอยู่ที่ "'+p.consignment+'"'};
+    if(p.stock<=0 || p.status!=='พร้อมขาย') return {sku:p.sku, p, st:'warn2', msg:'สต็อก '+p.stock+' · '+p.status};
+    previewOk.push(p);
+    return {sku:p.sku, p, st:'ok', msg:'พร้อมส่งฝาก'};
+  });
+  const tagCls = {ok:'tag-ok', warn:'tag-err', warn2:'tag-warn', err:'tag-err'};
+  area.innerHTML = `
+    <div class="tbl-wrap"><table>
+      <tr><th>SKU</th><th>รูป</th><th>ชื่อสินค้า</th><th>คงเหลือ</th><th>สถานะ</th><th>ผลตรวจ</th></tr>
+      ${rows.map(r=>`<tr>
+        <td><b>${esc(r.sku)}</b></td>
+        <td>${r.p&&r.p.imageUrl?`<img class="thumb" src="${esc(imgSrc(r.p.imageUrl))}" loading="lazy" onerror="this.style.display='none'">`:'—'}</td>
+        <td>${r.p?esc(r.p.name):'—'}</td>
+        <td>${r.p?r.p.stock:'—'}</td>
+        <td>${r.p?esc(r.p.status):'—'}</td>
+        <td><span class="tag ${tagCls[r.st]}">${esc(r.msg)}</span></td>
+      </tr>`).join('')}
+    </table></div>
+    <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span class="summary-chip">✅ ส่งฝากได้ ${previewOk.length} / ${skus.length} รายการ → ร้าน "${esc(shop)}"</span>
+      <button class="btn btn-green" onclick="confirmConsign()" ${previewOk.length?'':'disabled'}>✔ ยืนยันส่งฝากขาย ${previewOk.length} รายการ</button>
+    </div>
+    <p class="muted" style="margin-top:8px">หมายเหตุ: รายการที่ฝากขายอยู่แล้ว/ไม่พบ จะถูกข้าม · สินค้าฝากขายจะถูกซ่อนจาก catalog อัตโนมัติ</p>`;
+}
+async function confirmConsign(){
+  const shop = document.getElementById('shop-name').value.trim();
+  if(!shop || !previewOk.length) return;
+  try{
+    toast('กำลังบันทึก…');
+    // ensure header W1
+    const h = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId:CONFIG.SHEET_ID, range:CONFIG.SHEET+'!W1' });
+    if(!h.result.values || !h.result.values[0] || !h.result.values[0][0]){
+      await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId:CONFIG.SHEET_ID, range:CONFIG.SHEET+'!W1', valueInputOption:'RAW', resource:{values:[['consignment']]} });
+    }
+    await gapi.client.sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId:CONFIG.SHEET_ID,
+      resource:{ valueInputOption:'RAW', data: previewOk.map(p=>({range:`${CONFIG.SHEET}!W${p.row}`, values:[[shop]]})) }
+    });
+    toast(`✅ ส่งฝากขาย ${previewOk.length} รายการ → "${shop}" เรียบร้อย`,'ok');
+    document.getElementById('preview-area').innerHTML='';
+    document.getElementById('sku-input').value='';
+    previewOk=[];
+    await reloadAll();
+  }catch(e){ console.error(e); toast('บันทึกไม่สำเร็จ: '+(e.result?.error?.message||e.message||e),'err'); }
+}
+
+/* ═══ รายการฝากขาย ═══ */
+function renderList(){
+  const shop = document.getElementById('filter-shop').value || 'all';
+  const list = consigned(shop);
+  const el = document.getElementById('consign-list');
+  if(!list.length){ el.innerHTML='<p class="muted">— ยังไม่มีสินค้าฝากขาย —</p>'; updateReturnBtn(); return; }
+  const groups = {};
+  list.forEach(p=>{ (groups[p.consignment]=groups[p.consignment]||[]).push(p); });
+  el.innerHTML = Object.keys(groups).sort().map(s=>{
+    const items = groups[s];
+    const total = items.reduce((a,p)=>a+(p.promoPrice>0&&p.promoPrice<p.sellPrice?p.promoPrice:p.sellPrice)*p.stock,0);
+    return `
+    <div class="shop-head">
+      <h3>🏪 ${esc(s)}</h3><span class="cnt">${items.length} รายการ · มูลค่ารวม ฿${fmtN(total)}</span>
+      <label style="margin:0;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer">
+        <input type="checkbox" onchange="toggleShop(this,'${esc(s).replace(/'/g,"\\'")}')"> เลือกทั้งร้าน</label>
+    </div>
+    <div class="tbl-wrap"><table>
+      <tr><th></th><th>SKU</th><th>รูป</th><th>ชื่อสินค้า</th><th>หมวด</th><th>วัสดุ</th><th>ราคา</th><th>โปรฯ</th><th>คงเหลือ</th><th>สถานะ</th></tr>
+      ${items.map(p=>`<tr>
+        <td><input type="checkbox" class="ret-chk" data-row="${p.row}" data-shop="${esc(p.consignment)}" onchange="updateReturnBtn()"></td>
+        <td><b>${esc(p.sku)}</b></td>
+        <td>${p.imageUrl?`<img class="thumb" src="${esc(imgSrc(p.imageUrl))}" loading="lazy" onerror="this.style.display='none'">`:'—'}</td>
+        <td>${esc(p.name)}</td><td>${esc(p.category)}</td><td>${esc(p.material)}</td>
+        <td>฿${fmtN(p.sellPrice)}</td><td>${p.promoPrice?'฿'+fmtN(p.promoPrice):'—'}</td>
+        <td>${p.stock}</td><td>${esc(p.status)}</td>
+      </tr>`).join('')}
+    </table></div>`;
+  }).join('');
+  updateReturnBtn();
+}
+function toggleShop(cb, shop){
+  document.querySelectorAll('.ret-chk').forEach(c=>{ if(c.dataset.shop===shop) c.checked=cb.checked; });
+  updateReturnBtn();
+}
+function updateReturnBtn(){
+  const n = document.querySelectorAll('.ret-chk:checked').length;
+  const b = document.getElementById('btn-return');
+  b.disabled = !n;
+  b.textContent = n ? `↩ รับคืนที่เลือก (${n})` : '↩ รับคืนที่เลือก';
+}
+async function returnSelected(){
+  const rows = [...document.querySelectorAll('.ret-chk:checked')].map(c=>Number(c.dataset.row));
+  if(!rows.length) return;
+  if(!confirm(`ยืนยันรับคืนสินค้า ${rows.length} รายการ กลับเข้าร้าน?`)) return;
+  try{
+    toast('กำลังบันทึก…');
+    await gapi.client.sheets.spreadsheets.values.batchClear({
+      spreadsheetId:CONFIG.SHEET_ID,
+      resource:{ ranges: rows.map(r=>`${CONFIG.SHEET}!W${r}`) }
+    });
+    toast(`✅ รับคืน ${rows.length} รายการเรียบร้อย — สินค้ากลับขึ้น catalog แล้ว`,'ok');
+    await reloadAll();
+  }catch(e){ console.error(e); toast('บันทึกไม่สำเร็จ: '+(e.result?.error?.message||e.message||e),'err'); }
+}
+
+/* ═══ รายงาน ═══ */
+const REPORT_COLS = ['sku','picture','name','category','material','weight','gemType','gemWeight','sellPrice','promotionPrice','notes','stock','status'];
+function reportItems(){ return consigned(document.getElementById('filter-shop').value||'all'); }
+function reportTitle(){
+  const shop = document.getElementById('filter-shop').value||'all';
+  return shop==='all' ? 'ทุกร้าน' : shop;
+}
+
+function exportPDF(){
+  const items = reportItems();
+  if(!items.length){ toast('ไม่มีรายการให้ออกรายงาน','err'); return; }
+  const w = window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>รายงานฝากขาย — ${esc(reportTitle())}</title>
+  <style>
+  @page{size:A4 landscape;margin:10mm}
+  body{font-family:'Sarabun',sans-serif;font-size:11px;color:#1A1A1A;margin:0;padding:16px}
+  h1{font-size:16px;color:#8A6D2F;margin:0 0 2px}
+  .sub{font-size:11px;color:#666;margin-bottom:12px}
+  table{width:100%;border-collapse:collapse}
+  th{background:#FBF7EE;color:#8A6D2F;font-size:9px;text-transform:uppercase;padding:5px 6px;border:1px solid #d8c894;text-align:left}
+  td{padding:4px 6px;border:1px solid #ddd;vertical-align:middle}
+  img{width:52px;height:52px;object-fit:cover;border-radius:5px}
+  tr{page-break-inside:avoid}
+  .r{text-align:right}
+  .btn{position:fixed;top:10px;right:12px;padding:8px 18px;background:#C9A84C;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit}
+  @media print{.btn{display:none}}
+  </style></head><body>
+  <button class="btn" onclick="window.print()">🖨 พิมพ์ / บันทึก PDF</button>
+  <h1>💎 JS Jewelry — รายงานสินค้าฝากขาย</h1>
+  <div class="sub">ร้านปลายทาง: <b>${esc(reportTitle())}</b> · ${items.length} รายการ · ออกรายงาน ${esc(nowTH())}</div>
+  <table><tr>${REPORT_COLS.map(c=>`<th>${c}</th>`).join('')}<tr>
+  ${items.map(p=>`<tr>
+    <td><b>${esc(p.sku)}</b></td>
+    <td>${p.imageUrl?`<img src="${esc(imgSrc(p.imageUrl))}" onerror="this.style.display='none'">`:''}</td>
+    <td>${esc(p.name)}</td><td>${esc(p.category)}</td><td>${esc(p.material)}</td>
+    <td class="r">${esc(p.weight)}</td><td>${esc(p.gemType)}</td><td class="r">${esc(p.gemWeight)}</td>
+    <td class="r">${fmtN(p.sellPrice)}</td><td class="r">${p.promoPrice?fmtN(p.promoPrice):''}</td>
+    <td>${esc(p.notes)}</td><td class="r">${p.stock}</td><td>${esc(p.status)}</td>
+  </tr>`).join('')}
+  </table></body></html>`);
+  w.document.close();
+}
+
+async function exportExcel(){
+  const items = reportItems();
+  if(!items.length){ toast('ไม่มีรายการให้ออกรายงาน','err'); return; }
+  toast(`กำลังสร้าง Excel + ดึงรูป ${items.length} รายการ…`);
+  try{
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('ฝากขาย');
+    ws.columns = [
+      {header:'sku',width:12},{header:'picture',width:13},{header:'name',width:34},{header:'category',width:11},
+      {header:'material',width:14},{header:'weight',width:8},{header:'gemType',width:14},{header:'gemWeight',width:11},
+      {header:'sellPrice',width:11},{header:'promotionPrice',width:14},{header:'notes',width:32},{header:'stock',width:7},
+      {header:'status',width:11},{header:'consignShop',width:16}
+    ];
+    ws.getRow(1).font = {bold:true};
+    ws.getRow(1).fill = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFBF7EE'}};
+    items.forEach(p=>{
+      ws.addRow([p.sku,'',p.name,p.category,p.material,p.weight,p.gemType,p.gemWeight,p.sellPrice,p.promoPrice||'',p.notes,p.stock,p.status,p.consignment]);
+    });
+    // ฝังรูปที่ 1 (คอลัมน์ B)
+    for(let i=0;i<items.length;i++){
+      const rowN = i+2;
+      ws.getRow(rowN).height = 64;
+      ws.getRow(rowN).alignment = {vertical:'middle',wrapText:true};
+      const id = getImgId(items[i].imageUrl);
+      if(!id) continue;
+      try{
+        const r = await fetch(CONFIG.IMG_PROXY+id);
+        if(!r.ok) continue;
+        const buf = await r.arrayBuffer();
+        const imgId = wb.addImage({buffer:buf, extension:'jpeg'});
+        ws.addImage(imgId, {tl:{col:1.08,row:rowN-0.97}, ext:{width:80,height:80}, editAs:'oneCell'});
+      }catch(e){ console.warn('img fail', items[i].sku, e); }
+    }
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const shop = reportTitle()==='ทุกร้าน'?'all':reportTitle();
+    a.download = `consignment_${shop}_${new Date().toISOString().slice(0,10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('✅ ดาวน์โหลด Excel เรียบร้อย','ok');
+  }catch(e){ console.error(e); toast('สร้าง Excel ไม่สำเร็จ: '+(e.message||e),'err'); }
+}
+</script>
+<script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+<script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+/* ============================================================
+   theme-light.css — JS Jewelry Admin : ธีมสว่างทอง (แบบหน้า consignment)
+   โหลดทับ style เดิมใน index.html — ลบไฟล์นี้/ลบ <link> = กลับธีมมืดทันที
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+:root{
+  --gold:#C9A84C;
+  --gold-l:#B08F3B;          /* hover บนพื้นสว่าง ต้องเข้มขึ้น ไม่ใช่อ่อนลง */
+  --gold-d:#8A6D2F;
+  --bg:#FAFAFA;
+  --s1:#FFFFFF;
+  --s2:#FBF7EE;
+  --s3:#F1EAD8;
+  --border:rgba(0,0,0,.10);
+  --text:#1A1A1A;
+  --muted:#6B6B6B;
+  --red:#C0271E;
+  --green:#2d7a50;
+  --blue:#2f6db3;
+  --r:14px;
+}
+body{font-family:'Sarabun','Segoe UI',sans-serif}
+
+/* ── Login ── */
+#login-screen{background:var(--bg)}
+.login-card{background:var(--s1);border:1px solid rgba(201,168,76,.35);box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.login-logo{color:var(--gold-d)}
+
+/* ── Header: คงโทนน้ำตาลเข้ม+ทอง แบบ nav หน้า consignment ── */
+header{background:linear-gradient(135deg,#2B1A0E,#3E2A1A 55%,#4A3220) !important;border-bottom:1px solid rgba(201,168,76,.35) !important}
+header .logo{color:var(--gold)}
+header .logo span{color:rgba(255,255,255,.45)}
+header .hdate{background:var(--gold-d);color:#F5EDD8}
+header .btn-signout{border-color:rgba(255,255,255,.25);color:rgba(255,255,255,.7)}
+header .btn-signout:hover{border-color:var(--red);color:#ff9d94}
+
+/* ── Tabs ── */
+.tabs{background:var(--s1);border-bottom:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.tab{color:var(--muted)}
+.tab:hover{color:var(--gold-d)}
+.tab.active{color:var(--gold-d);border-bottom-color:var(--gold)}
+
+/* ── Cards / ตาราง ── */
+.card{box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.card-title{color:var(--gold-d)}
+th{color:var(--gold-d) !important;background:var(--s2)}
+tr:hover td{background:var(--s2)}
+
+/* ── ปุ่ม/ฟอร์ม ── */
+input,select,textarea{background:#fff !important;color:var(--text) !important;border-color:var(--border) !important}
+input:focus,select:focus,textarea:focus{border-color:var(--gold) !important}
+input[type=date]{color-scheme:light}
+.btn{color:var(--text)}
+
+/* ── Modal / Toast ── */
+.modal-bg{background:rgba(0,0,0,.45)}
+.modal{background:var(--s1);border:1px solid var(--border);box-shadow:0 10px 40px rgba(0,0,0,.18)}

@@ -453,7 +453,7 @@ const CONFIG = {
   // G=gemType(6) H=gemWeight(7) I=costPrice(8) J=sellPrice(9) K=stock(10)
   // L=status(11) M=imageUrl(12) N=notes(13) O=createdAt(14) P=size(15)
   // U=imageUrl2(20) V=imageUrl3(21)
-  col: { sku:1, name:2, category:3, material:4, weight:5, gemType:6, gemWeight:7, sellPrice:9, size:15, notes:13, imageUrl:12, status:11, videoUrl:18, promoPrice:19, image2:20, image3:21 },
+  col: { sku:1, name:2, category:3, material:4, weight:5, gemType:6, gemWeight:7, sellPrice:9, size:15, notes:13, imageUrl:12, status:11, videoUrl:18, promoPrice:19, image2:20, image3:21, consignment:22 },
   // แท็บพลอย (Gems): id(0) code(1) gemType(2) weight-ct(3) shape(4) size(5) pricePerCt(6) stock(7) status(8) notes(9) createdAt(10) imageUrl(11)
   gemSheet: 'Gems',
   gemCol: { code:1, gemType:2, weight:3, shape:4, size:5, pricePerCt:6, stock:7, status:8, notes:9, imageUrl:11, pieces:13, videoUrl:14, promoPrice:15 },
@@ -510,6 +510,7 @@ async function fetchProducts() {
     promoPrice: parseFloat(row[c.promoPrice]) || 0,
     image2:    row[c.image2]   || '',
     image3:    row[c.image3]   || '',
+    consignment: (row[c.consignment] || '').trim(),
   }));
   const g = CONFIG.gemCol;
   const gems = gemRows.map(row => {
@@ -536,7 +537,7 @@ async function fetchProducts() {
     };
   });
   return [...products, ...gems]
-    .filter(p => p.sku && p.name && p.status !== 'หมดสต็อก'); // ซ่อนเฉพาะหมดสต็อก
+    .filter(p => p.sku && p.name && p.status !== 'หมดสต็อก' && !p.consignment); // ซ่อนเฉพาะหมดสต็อก
 }
 
 /* ══════════════════════════════════════════════

@@ -3,7 +3,7 @@ export const SHEET_ID = '1Tk53rhDhYRxTkGpXvbd55hMYlTJ83stwG0H3yoZrMDo';
 export const SITE = 'https://jsjewelry.pages.dev';
 export const LINE_URL = 'https://line.me/R/oaMessage/%40888zbakd/?';
 
-const COL = { sku:1,name:2,category:3,material:4,weight:5,gemType:6,gemWeight:7,sellPrice:9,status:11,imageUrl:12,notes:13,size:15,highlight:16,videoUrl:18,promoPrice:19,imageUrl2:20,imageUrl3:21 };
+const COL = { sku:1,name:2,category:3,material:4,weight:5,gemType:6,gemWeight:7,sellPrice:9,status:11,imageUrl:12,notes:13,size:15,highlight:16,videoUrl:18,promoPrice:19,imageUrl2:20,imageUrl3:21,consignment:22 };
 const GEM = { code:1,gemType:2,weight:3,shape:4,size:5,pricePerCt:6,status:8,notes:9,imageUrl:11,origin:12,pieces:13,videoUrl:14,promoPrice:15 };
 const CAT_EMOJI = { 'แหวน':'💍','ต่างหู':'✨','จี้':'🔮','กำไล':'📿','สร้อยข้อมือ':'🌟','สร้อยคอ':'💎','พลอย':'💠' };
 
@@ -26,7 +26,7 @@ export function mapRows(prodRows, gemRows){
     sellPrice:parseFloat(r[COL.sellPrice])||0, status:r[COL.status]||'', imageUrl:r[COL.imageUrl]||'',
     notes:r[COL.notes]||'', size:r[COL.size]||'', highlight:r[COL.highlight]||'',
     promoPrice:parseFloat(r[COL.promoPrice])||0, imageUrl2:r[COL.imageUrl2]||'', imageUrl3:r[COL.imageUrl3]||'',
-    videoUrl:r[COL.videoUrl]||'', shape:'', origin:'', pieces:0, pricePerCt:0,
+    videoUrl:r[COL.videoUrl]||'', shape:'', origin:'', pieces:0, pricePerCt:0, consignment:(r[COL.consignment]||'').trim(),
   }));
   const gems = (gemRows||[]).map(r=>{
     const wt=parseFloat(r[GEM.weight])||0, ppc=parseFloat(r[GEM.pricePerCt])||0;
@@ -34,9 +34,9 @@ export function mapRows(prodRows, gemRows){
       gemType:'', gemWeight:r[GEM.weight]||'', shape:r[GEM.shape]||'', origin:r[GEM.origin]||'',
       pricePerCt:ppc, sellPrice:Math.round(ppc*wt), status:r[GEM.status]||'', imageUrl:r[GEM.imageUrl]||'',
       notes:r[GEM.notes]||'', size:r[GEM.size]||'', pieces:Number(r[GEM.pieces])||1,
-      promoPrice:parseFloat(r[GEM.promoPrice])||0, videoUrl:r[GEM.videoUrl]||'', highlight:'', imageUrl2:'', imageUrl3:'' };
+      promoPrice:parseFloat(r[GEM.promoPrice])||0, videoUrl:r[GEM.videoUrl]||'', highlight:'', imageUrl2:'', imageUrl3:'', consignment:'' };
   });
-  return [...products, ...gems].filter(p=>p.sku && p.name && p.status!=='สินค้าหมด' && p.status!=='หมดสต็อก' && p.status!=='หยุดขาย');
+  return [...products, ...gems].filter(p=>p.sku && p.name && p.status!=='สินค้าหมด' && p.status!=='หมดสต็อก' && p.status!=='หยุดขาย' && !p.consignment);
 }
 
 async function fetchSheet(sheetName){

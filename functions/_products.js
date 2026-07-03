@@ -3,7 +3,7 @@ export const SHEET_ID = '1Tk53rhDhYRxTkGpXvbd55hMYlTJ83stwG0H3yoZrMDo';
 export const SITE = 'https://jsjewelry.pages.dev';
 export const LINE_URL = 'https://line.me/R/oaMessage/%40888zbakd/?';
 
-const COL = { sku:1,name:2,category:3,material:4,weight:5,gemType:6,gemWeight:7,sellPrice:9,status:11,imageUrl:12,notes:13,size:15,highlight:16,videoUrl:18,promoPrice:19,imageUrl2:20,imageUrl3:21,consignment:22 };
+const COL = { sku:1,name:2,category:3,material:4,weight:5,gemType:6,gemWeight:7,sellPrice:9,status:11,imageUrl:12,notes:13,size:15,highlight:16,videoUrl:18,promoPrice:19,imageUrl2:20,imageUrl3:21,stock:10,consignment:22 };
 const GEM = { code:1,gemType:2,weight:3,shape:4,size:5,pricePerCt:6,status:8,notes:9,imageUrl:11,origin:12,pieces:13,videoUrl:14,promoPrice:15 };
 const CAT_EMOJI = { 'แหวน':'💍','ต่างหู':'✨','จี้':'🔮','กำไล':'📿','สร้อยข้อมือ':'🌟','สร้อยคอ':'💎','พลอย':'💠' };
 
@@ -26,7 +26,7 @@ export function mapRows(prodRows, gemRows){
     sellPrice:parseFloat(r[COL.sellPrice])||0, status:r[COL.status]||'', imageUrl:r[COL.imageUrl]||'',
     notes:r[COL.notes]||'', size:r[COL.size]||'', highlight:r[COL.highlight]||'',
     promoPrice:parseFloat(r[COL.promoPrice])||0, imageUrl2:r[COL.imageUrl2]||'', imageUrl3:r[COL.imageUrl3]||'',
-    videoUrl:r[COL.videoUrl]||'', shape:'', origin:'', pieces:0, pricePerCt:0, consignment:(r[COL.consignment]||'').trim(),
+    videoUrl:r[COL.videoUrl]||'', shape:'', origin:'', pieces:0, pricePerCt:0, consignment:(r[COL.consignment]||'').trim(), stock:parseInt(r[COL.stock])||0,
   }));
   const gems = (gemRows||[]).map(r=>{
     const wt=parseFloat(r[GEM.weight])||0, ppc=parseFloat(r[GEM.pricePerCt])||0;
@@ -46,8 +46,20 @@ async function fetchSheet(sheetName){
   return parseCSV(await r.text());
 }
 export async function getAllProducts(){
-  const [p,g] = await Promise.all([ fetchSheet('Products'), fetchSheet('Gems').catch(()=>[]) ]);
-  return mapRows(p,g);
+  const [p,g,cm] = await Promise.all([ fetchSheet('Products'), fetchSheet('Gems').catch(()=>[]), fetchConsignedMap().catch(()=>({})) ]);
+  return mapRows(p,g).filter(x=>{ const q=cm[(x.sku||'').toLowerCase()]; if(!q) return true; return (x.stock||0)-q>0; });
+}
+// ยอดฝากขายค้างอยู่ต่อ SKU จากแท็บ Consignments (sku,shop,qty,dateOut,note)
+async function fetchConsignedMap(){
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Consignments`;
+  const r = await fetch(url, { cf:{ cacheTtl:300, cacheEverything:true } });
+  if(!r.ok) return {};
+  const lines = (await r.text()).trim().split('\n');
+  const head = parseCSVRow(lines[0]||'');
+  if((head[0]||'').toLowerCase()!=='sku') return {}; // แท็บไม่มี → gviz คืนแท็บแรก
+  const m = {};
+  lines.slice(1).forEach(l=>{ const c=parseCSVRow(l); const k=(c[0]||'').trim().toLowerCase(); const q=parseInt(c[2])||0; if(k&&q>0) m[k]=(m[k]||0)+q; });
+  return m;
 }
 
 export function getImgUrl(url){

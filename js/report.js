@@ -39,11 +39,16 @@ async function prRows(){
     }));
   } else {
     const resp = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: CONFIG.SHEET_ID, range: CONFIG.PRODUCTS_SHEET + '!A:W' });
+    let cons = {};
+    try{
+      const lr = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: CONFIG.SHEET_ID, range: 'Consignments!A:E' });
+      (lr.result.values||[]).slice(1).forEach(r=>{ const k=(r[0]||'').trim().toLowerCase(); const q=Number(r[2]||0); if(k&&q>0){ (cons[k]=cons[k]||[]).push(((r[1]||'').trim())+'×'+q); } });
+    }catch(e){ /* ยังไม่มีแท็บ Consignments */ }
     rows = (resp.result.values||[]).slice(1).filter(r=>r&&r[1]).map(r=>({
       sku:(r[1]||'').trim(), name:r[2]||'', category:r[3]||'', material:r[4]||'', weight:r[5]||'',
       gemType:r[6]||'', gemWeight:r[7]||'', costPrice:r[8]||'', sellPrice:r[9]||'',
       promotionPrice:r[19]||'', notes:r[13]||'', stock:r[10]||'', status:r[11]||'',
-      imageUrl:r[12]||'', consign:(r[22]||'').trim()
+      imageUrl:r[12]||'', consign:(cons[(r[1]||'').trim().toLowerCase()]||[]).join(', ')
     }));
     if(cat !== 'all') rows = rows.filter(p=>p.category===cat);
   }

@@ -87,8 +87,8 @@ tr:hover td{background:var(--gold-bg)}
         <datalist id="shop-list"></datalist>
       </div>
       <div class="form-col" style="flex:2">
-        <label>รหัสสินค้า (SKU) — วางได้หลายตัว คั่นด้วยเว้นวรรค คอมมา หรือขึ้นบรรทัดใหม่</label>
-        <textarea id="sku-input" placeholder="SR0010, SR0024&#10;SE0005 SE0012"></textarea>
+        <label>รหัสสินค้า — บรรทัดละรหัส ใส่จำนวนได้ เช่น "SR0010 x2" (ไม่ใส่จำนวน = ฝากทั้งหมดที่เหลือหน้าร้าน)</label>
+        <textarea id="sku-input" placeholder="SR0010 x2placeholder="SR0010, SR0024&#10;SE0005 SE0012"#10;SR0024placeholder="SR0010, SR0024&#10;SE0005 SE0012"#10;SE0005 x1"></textarea>
       </div>
     </div>
     <button class="btn btn-gold" onclick="previewConsign()">🔍 ตรวจสอบรายการ</button>
@@ -121,13 +121,14 @@ const CONFIG = {
   CLIENT_ID: '725893335045-4mhpfppohrm2tg7guaq3c1q7no3dlaki.apps.googleusercontent.com',
   SHEET_ID:  '1Tk53rhDhYRxTkGpXvbd55hMYlTJ83stwG0H3yoZrMDo',
   SHEET:     'Products',
+  LEDGER:    'Consignments',
+  SALES:     'Sales',
   SCOPES:    'https://www.googleapis.com/auth/spreadsheets',
   IMG_PROXY: 'https://jsjewelry.pages.dev/img/'
 };
-// Products columns (0-based): W(22) = consignment
-const COL = { sku:1,name:2,category:3,material:4,weight:5,gemType:6,gemWeight:7,sellPrice:9,stock:10,status:11,imageUrl:12,notes:13,promoPrice:19,consignment:22 };
+const COL = { sku:1,name:2,category:3,material:4,weight:5,gemType:6,gemWeight:7,costPrice:8,sellPrice:9,stock:10,status:11,imageUrl:12,notes:13,promoPrice:19,consignW:22 };
 
-/* ═══ AUTH (Google Identity Services) ═══ */
+/* ═══ AUTH ═══ */
 let tokenClient=null, accessToken=null, gapiReady=false, gisReady=false;
 function gapiLoaded(){ gapi.load('client', async ()=>{ await gapi.client.init({}); await gapi.client.load('https://sheets.googleapis.com/$discovery/rest?version=v4'); gapiReady=true; maybeRender(); }); }
 function gisLoaded(){ tokenClient = google.accounts.oauth2.initTokenClient({ client_id:CONFIG.CLIENT_ID, scope:CONFIG.SCOPES, callback:handleToken }); gisReady=true; maybeRender(); }
@@ -150,18 +151,23 @@ function showApp(){ document.getElementById('login-screen').style.display='none'
 function showLogin(){ document.getElementById('login-screen').style.display='flex'; document.getElementById('app-screen').style.display='none'; }
 
 /* ═══ HELPERS ═══ */
-function toast(msg,type){ const el=document.getElementById('toast'); el.textContent=msg; el.className=type||''; el.style.display='block'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none', 4200); }
+function toast(msg,type){ const el=document.getElementById('toast'); el.textContent=msg; el.className=type||''; el.style.display='block'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none', 4500); }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function fmtN(n){ return n ? Number(n).toLocaleString('th-TH') : ''; }
+function fmtN(n){ return n||n===0 ? Number(n).toLocaleString('th-TH') : ''; }
 function getImgId(url){ if(!url) return ''; let m;
-  if((m=url.match(/\/d\/([a-zA-Z0-9_-]{10,})/))) return m[1];
-  if((m=url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/))) return m[1];
+  if((m=String(url).match(/\/d\/([a-zA-Z0-9_-]{10,})/))) return m[1];
+  if((m=String(url).match(/[?&]id=([a-zA-Z0-9_-]{10,})/))) return m[1];
   return ''; }
 function imgSrc(url){ const id=getImgId(url); return id ? CONFIG.IMG_PROXY+id : url; }
 function nowTH(){ return new Date().toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'}); }
+function todayTH(){ return new Date().toLocaleDateString('th-TH',{year:'numeric',month:'2-digit',day:'2-digit'}); }
+function genId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
 /* ═══ DATA ═══ */
-let products = []; // {row, sku, name, ..., consignment}
+let products = [];   // {row, sku, ..., stock, consignW}
+let ledger   = [];   // {row, sku, shop, qty, date, note}
+let prodBySku = {};
+
 async function loadProducts(){
   const resp = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId:CONFIG.SHEET_ID, range:CONFIG.SHEET+'!A:W' });
   const rows = resp.result.values || [];
@@ -169,18 +175,64 @@ async function loadProducts(){
     row:i+2,
     sku:(r[COL.sku]||'').trim(), name:r[COL.name]||'', category:r[COL.category]||'',
     material:r[COL.material]||'', weight:r[COL.weight]||'', gemType:r[COL.gemType]||'', gemWeight:r[COL.gemWeight]||'',
-    sellPrice:Number(r[COL.sellPrice]||0), promoPrice:Number(r[COL.promoPrice]||0),
+    costPrice:Number(r[COL.costPrice]||0), sellPrice:Number(r[COL.sellPrice]||0), promoPrice:Number(r[COL.promoPrice]||0),
     notes:r[COL.notes]||'', stock:Number(r[COL.stock]||0), status:r[COL.status]||'',
-    imageUrl:r[COL.imageUrl]||'', consignment:(r[COL.consignment]||'').trim()
+    imageUrl:r[COL.imageUrl]||'', consignW:(r[COL.consignW]||'').trim()
   })).filter(p=>p.sku);
+  prodBySku = {};
+  products.forEach(p=>{ prodBySku[p.sku.toLowerCase()] = p; });
 }
-function consigned(shop){ return products.filter(p=>p.consignment && (!shop||shop==='all'||p.consignment===shop)); }
-function shopNames(){ return [...new Set(consigned().map(p=>p.consignment))].sort(); }
+
+async function ensureLedgerTab(){
+  try{
+    await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId:CONFIG.SHEET_ID, range:CONFIG.LEDGER+'!A1:E1' });
+  }catch(e){
+    await gapi.client.sheets.spreadsheets.batchUpdate({ spreadsheetId:CONFIG.SHEET_ID,
+      resource:{ requests:[{ addSheet:{ properties:{ title:CONFIG.LEDGER } } }] } });
+  }
+  const h = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId:CONFIG.SHEET_ID, range:CONFIG.LEDGER+'!A1:E1' });
+  if(!h.result.values || !h.result.values[0] || h.result.values[0][0]!=='sku'){
+    await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId:CONFIG.SHEET_ID, range:CONFIG.LEDGER+'!A1:E1',
+      valueInputOption:'RAW', resource:{ values:[['sku','shop','qty','dateOut','note']] } });
+  }
+}
+
+async function loadLedger(){
+  const resp = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId:CONFIG.SHEET_ID, range:CONFIG.LEDGER+'!A:E' });
+  const rows = resp.result.values || [];
+  ledger = rows.slice(1).map((r,i)=>({
+    row:i+2, sku:(r[0]||'').trim(), shop:(r[1]||'').trim(), qty:Number(r[2]||0), date:r[3]||'', note:r[4]||''
+  })).filter(x=>x.sku && x.shop);
+}
+function activeLedger(){ return ledger.filter(x=>x.qty>0); }
+function consignedOf(sku){ return activeLedger().filter(x=>x.sku.toLowerCase()===sku.toLowerCase()).reduce((a,x)=>a+x.qty,0); }
+function availOf(p){ return Math.max(0, p.stock - consignedOf(p.sku)); }
+function shopNames(){ return [...new Set(activeLedger().map(x=>x.shop))].sort(); }
+
+/* ═══ MIGRATE ข้อมูลจากคอลัมน์ W เดิม ═══ */
+async function migrateW(){
+  const olds = products.filter(p=>p.consignW);
+  if(!olds.length) return;
+  toast('กำลังย้ายข้อมูลฝากขายเดิม '+olds.length+' รายการเข้าระบบใหม่…');
+  const newRows = [];
+  olds.forEach(p=>{
+    const dup = ledger.find(x=>x.sku.toLowerCase()===p.sku.toLowerCase() && x.shop===p.consignW);
+    if(!dup) newRows.push([p.sku, p.consignW, p.stock||1, todayTH(), 'ย้ายจากระบบเดิม (ฝากทั้งหมด)']);
+  });
+  if(newRows.length){
+    await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId:CONFIG.SHEET_ID, range:CONFIG.LEDGER+'!A:A',
+      valueInputOption:'RAW', insertDataOption:'INSERT_ROWS', resource:{ values:newRows } });
+  }
+  await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId:CONFIG.SHEET_ID, range:CONFIG.SHEET+'!W2:W100000' });
+  toast('✅ ย้ายข้อมูลฝากขายเดิม '+newRows.length+' รายการเรียบร้อย','ok');
+}
 
 async function reloadAll(){
   try{
     document.getElementById('consign-list').innerHTML='<p class="muted">กำลังโหลด…</p>';
-    await loadProducts();
+    await ensureLedgerTab();
+    await Promise.all([loadProducts(), loadLedger()]);
+    if(products.some(p=>p.consignW)){ await migrateW(); await Promise.all([loadProducts(), loadLedger()]); }
     buildShopUI(); renderList();
   }catch(e){ console.error(e); toast('โหลดข้อมูลไม่สำเร็จ: '+(e.result?.error?.message||e.message||e),'err'); }
 }
@@ -189,64 +241,80 @@ function buildShopUI(){
   document.getElementById('shop-list').innerHTML = shops.map(s=>`<option value="${esc(s)}">`).join('');
   const sel = document.getElementById('filter-shop');
   const cur = sel.value || 'all';
-  sel.innerHTML = `<option value="all">🏪 ทุกร้าน (${consigned().length} ชิ้น)</option>` + shops.map(s=>`<option value="${esc(s)}">${esc(s)} (${consigned(s).length})</option>`).join('');
+  const totalQty = activeLedger().reduce((a,x)=>a+x.qty,0);
+  sel.innerHTML = `<option value="all">🏪 ทุกร้าน (${totalQty} ชิ้น)</option>` + shops.map(s=>{
+    const q = activeLedger().filter(x=>x.shop===s).reduce((a,x)=>a+x.qty,0);
+    return `<option value="${esc(s)}">${esc(s)} (${q} ชิ้น)</option>`;
+  }).join('');
   sel.value = shops.includes(cur)||cur==='all' ? cur : 'all';
 }
 
-/* ═══ ส่งฝากขาย: PREVIEW + CONFIRM ═══ */
-let previewOk = [];
+/* ═══ ส่งฝากขาย ═══ */
+let previewItems = []; // {p, qty}
 function previewConsign(){
   const shop = document.getElementById('shop-name').value.trim();
   const raw  = document.getElementById('sku-input').value.trim();
   const area = document.getElementById('preview-area');
-  previewOk = [];
+  previewItems = [];
   if(!shop || !raw){ area.innerHTML='<p class="muted">⚠️ กรอกชื่อร้านและรหัสสินค้าก่อนค่ะ</p>'; return; }
-  const skus = [...new Set(raw.split(/[\s,;]+/).filter(Boolean))];
-  const rows = skus.map(sku=>{
-    const p = products.find(x=>x.sku.toLowerCase()===sku.toLowerCase());
+  const lines = raw.split(/[\n,;]+/).map(x=>x.trim()).filter(Boolean);
+  const seen = {};
+  const rows = lines.map(line=>{
+    const m = line.split(/[\s×xX*]+/).filter(Boolean);
+    const sku = (m[0]||'').trim();
+    const reqQty = m[1] ? parseInt(m[1]) : null;
+    if(seen[sku.toLowerCase()]) return {sku, st:'err', msg:'รหัสซ้ำในรายการ'};
+    seen[sku.toLowerCase()] = 1;
+    const p = prodBySku[sku.toLowerCase()];
     if(!p) return {sku, st:'err', msg:'ไม่พบในระบบ'};
-    if(p.consignment) return {sku:p.sku, p, st:'warn', msg:'ฝากขายอยู่ที่ "'+p.consignment+'"'};
-    if(p.stock<=0 || p.status!=='พร้อมขาย') return {sku:p.sku, p, st:'warn2', msg:'สต็อก '+p.stock+' · '+p.status};
-    previewOk.push(p);
-    return {sku:p.sku, p, st:'ok', msg:'พร้อมส่งฝาก'};
+    const avail = availOf(p);
+    if(avail<=0) return {sku:p.sku, p, st:'err', msg:'ไม่เหลือหน้าร้าน (สต็อก '+p.stock+' ฝากครบแล้ว)'};
+    const q = reqQty===null ? avail : reqQty;
+    if(q<1 || isNaN(q)) return {sku:p.sku, p, st:'err', msg:'จำนวนไม่ถูกต้อง'};
+    if(q>avail) return {sku:p.sku, p, st:'warn', msg:'ขอฝาก '+q+' แต่เหลือหน้าร้าน '+avail};
+    previewItems.push({p, qty:q});
+    return {sku:p.sku, p, st:'ok', qty:q, avail, msg:'ฝาก '+q+' / เหลือหน้าร้าน '+avail};
   });
-  const tagCls = {ok:'tag-ok', warn:'tag-err', warn2:'tag-warn', err:'tag-err'};
+  const tagCls = {ok:'tag-ok', warn:'tag-warn', err:'tag-err'};
   area.innerHTML = `
     <div class="tbl-wrap"><table>
-      <tr><th>SKU</th><th>รูป</th><th>ชื่อสินค้า</th><th>คงเหลือ</th><th>สถานะ</th><th>ผลตรวจ</th></tr>
+      <tr><th>SKU</th><th>รูป</th><th>ชื่อสินค้า</th><th>สต็อกรวม</th><th>ฝากอยู่</th><th>เหลือหน้าร้าน</th><th>จำนวนที่จะฝาก</th><th>ผลตรวจ</th></tr>
       ${rows.map(r=>`<tr>
         <td><b>${esc(r.sku)}</b></td>
         <td>${r.p&&r.p.imageUrl?`<img class="thumb" src="${esc(imgSrc(r.p.imageUrl))}" loading="lazy" onerror="this.style.display='none'">`:'—'}</td>
         <td>${r.p?esc(r.p.name):'—'}</td>
         <td>${r.p?r.p.stock:'—'}</td>
-        <td>${r.p?esc(r.p.status):'—'}</td>
+        <td>${r.p?consignedOf(r.p.sku):'—'}</td>
+        <td>${r.p?availOf(r.p):'—'}</td>
+        <td>${r.st==='ok'?('<b>'+r.qty+'</b>'):'—'}</td>
         <td><span class="tag ${tagCls[r.st]}">${esc(r.msg)}</span></td>
       </tr>`).join('')}
     </table></div>
     <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <span class="summary-chip">✅ ส่งฝากได้ ${previewOk.length} / ${skus.length} รายการ → ร้าน "${esc(shop)}"</span>
-      <button class="btn btn-green" onclick="confirmConsign()" ${previewOk.length?'':'disabled'}>✔ ยืนยันส่งฝากขาย ${previewOk.length} รายการ</button>
+      <span class="summary-chip">✅ ส่งฝากได้ ${previewItems.length} รายการ รวม ${previewItems.reduce((a,x)=>a+x.qty,0)} ชิ้น → ร้าน "${esc(shop)}"</span>
+      <button class="btn btn-green" onclick="confirmConsign()" ${previewItems.length?'':'disabled'}>✔ ยืนยันส่งฝากขาย</button>
     </div>
-    <p class="muted" style="margin-top:8px">หมายเหตุ: รายการที่ฝากขายอยู่แล้ว/ไม่พบ จะถูกข้าม · สินค้าฝากขายจะถูกซ่อนจาก catalog อัตโนมัติ</p>`;
+    <p class="muted" style="margin-top:8px">สินค้าที่ยังเหลือหน้าร้าน ≥ 1 ชิ้น จะยังโชว์บน catalog ตามปกติ · ฝากครบทุกชิ้นเมื่อไหร่ระบบซ่อนให้อัตโนมัติ</p>`;
 }
 async function confirmConsign(){
   const shop = document.getElementById('shop-name').value.trim();
-  if(!shop || !previewOk.length) return;
+  if(!shop || !previewItems.length) return;
   try{
     toast('กำลังบันทึก…');
-    // ensure header W1
-    const h = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId:CONFIG.SHEET_ID, range:CONFIG.SHEET+'!W1' });
-    if(!h.result.values || !h.result.values[0] || !h.result.values[0][0]){
-      await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId:CONFIG.SHEET_ID, range:CONFIG.SHEET+'!W1', valueInputOption:'RAW', resource:{values:[['consignment']]} });
-    }
-    await gapi.client.sheets.spreadsheets.values.batchUpdate({
-      spreadsheetId:CONFIG.SHEET_ID,
-      resource:{ valueInputOption:'RAW', data: previewOk.map(p=>({range:`${CONFIG.SHEET}!W${p.row}`, values:[[shop]]})) }
+    const updates = [], appends = [];
+    previewItems.forEach(it=>{
+      const ex = ledger.find(x=>x.sku.toLowerCase()===it.p.sku.toLowerCase() && x.shop===shop);
+      if(ex) updates.push({range:`${CONFIG.LEDGER}!C${ex.row}`, values:[[ex.qty + it.qty]]});
+      else appends.push([it.p.sku, shop, it.qty, todayTH(), '']);
     });
-    toast(`✅ ส่งฝากขาย ${previewOk.length} รายการ → "${shop}" เรียบร้อย`,'ok');
+    if(updates.length) await gapi.client.sheets.spreadsheets.values.batchUpdate({ spreadsheetId:CONFIG.SHEET_ID,
+      resource:{ valueInputOption:'RAW', data:updates } });
+    if(appends.length) await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId:CONFIG.SHEET_ID, range:CONFIG.LEDGER+'!A:A',
+      valueInputOption:'RAW', insertDataOption:'INSERT_ROWS', resource:{ values:appends } });
+    toast(`✅ ส่งฝากขาย ${previewItems.length} รายการ → "${shop}" เรียบร้อย`,'ok');
     document.getElementById('preview-area').innerHTML='';
     document.getElementById('sku-input').value='';
-    previewOk=[];
+    previewItems=[];
     await reloadAll();
   }catch(e){ console.error(e); toast('บันทึกไม่สำเร็จ: '+(e.result?.error?.message||e.message||e),'err'); }
 }
@@ -254,30 +322,40 @@ async function confirmConsign(){
 /* ═══ รายการฝากขาย ═══ */
 function renderList(){
   const shop = document.getElementById('filter-shop').value || 'all';
-  const list = consigned(shop);
+  const list = activeLedger().filter(x=>shop==='all'||x.shop===shop);
   const el = document.getElementById('consign-list');
   if(!list.length){ el.innerHTML='<p class="muted">— ยังไม่มีสินค้าฝากขาย —</p>'; updateReturnBtn(); return; }
   const groups = {};
-  list.forEach(p=>{ (groups[p.consignment]=groups[p.consignment]||[]).push(p); });
+  list.forEach(x=>{ (groups[x.shop]=groups[x.shop]||[]).push(x); });
   el.innerHTML = Object.keys(groups).sort().map(s=>{
     const items = groups[s];
-    const total = items.reduce((a,p)=>a+(p.promoPrice>0&&p.promoPrice<p.sellPrice?p.promoPrice:p.sellPrice)*p.stock,0);
+    const totalQty = items.reduce((a,x)=>a+x.qty,0);
+    const totalVal = items.reduce((a,x)=>{ const p=prodBySku[x.sku.toLowerCase()]; if(!p) return a;
+      const price = p.promoPrice>0&&p.promoPrice<p.sellPrice?p.promoPrice:p.sellPrice; return a+price*x.qty; },0);
     return `
     <div class="shop-head">
-      <h3>🏪 ${esc(s)}</h3><span class="cnt">${items.length} รายการ · มูลค่ารวม ฿${fmtN(total)}</span>
+      <h3>🏪 ${esc(s)}</h3><span class="cnt">${items.length} รายการ · ${totalQty} ชิ้น · มูลค่ารวม ฿${fmtN(totalVal)}</span>
       <label style="margin:0;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer">
         <input type="checkbox" onchange="toggleShop(this,'${esc(s).replace(/'/g,"\\'")}')"> เลือกทั้งร้าน</label>
     </div>
     <div class="tbl-wrap"><table>
-      <tr><th></th><th>SKU</th><th>รูป</th><th>ชื่อสินค้า</th><th>หมวด</th><th>วัสดุ</th><th>ราคา</th><th>โปรฯ</th><th>คงเหลือ</th><th>สถานะ</th></tr>
-      ${items.map(p=>`<tr>
-        <td><input type="checkbox" class="ret-chk" data-row="${p.row}" data-shop="${esc(p.consignment)}" onchange="updateReturnBtn()"></td>
-        <td><b>${esc(p.sku)}</b></td>
+      <tr><th></th><th>SKU</th><th>รูป</th><th>ชื่อสินค้า</th><th>ฝากอยู่</th><th>สต็อกรวม</th><th>เหลือหน้าร้าน</th><th>ราคา</th><th>ส่งฝากเมื่อ</th><th>จัดการ</th></tr>
+      ${items.map(x=>{ const p=prodBySku[x.sku.toLowerCase()]||{};
+        return `<tr>
+        <td><input type="checkbox" class="ret-chk" data-row="${x.row}" data-shop="${esc(x.shop)}" onchange="updateReturnBtn()"></td>
+        <td><b>${esc(x.sku)}</b></td>
         <td>${p.imageUrl?`<img class="thumb" src="${esc(imgSrc(p.imageUrl))}" loading="lazy" onerror="this.style.display='none'">`:'—'}</td>
-        <td>${esc(p.name)}</td><td>${esc(p.category)}</td><td>${esc(p.material)}</td>
-        <td>฿${fmtN(p.sellPrice)}</td><td>${p.promoPrice?'฿'+fmtN(p.promoPrice):'—'}</td>
-        <td>${p.stock}</td><td>${esc(p.status)}</td>
-      </tr>`).join('')}
+        <td>${esc(p.name||'(ไม่พบในชีต)')}</td>
+        <td><b>${x.qty}</b></td>
+        <td>${p.stock!=null?p.stock:'—'}</td>
+        <td>${p.sku?availOf(p):'—'}</td>
+        <td>฿${fmtN(p.sellPrice||0)}</td>
+        <td style="font-size:12px;color:var(--t3)">${esc(x.date)}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-outline" style="padding:5px 10px" onclick="returnQty(${x.row})">↩ คืน</button>
+          <button class="btn btn-green" style="padding:5px 10px" onclick="sellQty(${x.row})">💰 ขาย</button>
+        </td>
+      </tr>`; }).join('')}
     </table></div>`;
   }).join('');
   updateReturnBtn();
@@ -292,24 +370,93 @@ function updateReturnBtn(){
   b.disabled = !n;
   b.textContent = n ? `↩ รับคืนที่เลือก (${n})` : '↩ รับคืนที่เลือก';
 }
+
+/* ═══ รับคืน / ขายจากร้านฝาก ═══ */
+function ledgerByRow(row){ return ledger.find(x=>x.row===row); }
+
+async function setLedgerQty(entry, newQty, noteSuffix){
+  const data = [{range:`${CONFIG.LEDGER}!C${entry.row}`, values:[[newQty]]}];
+  if(newQty<=0) data.push({range:`${CONFIG.LEDGER}!E${entry.row}`, values:[[((entry.note||'')+' '+(noteSuffix||'')).trim()]]});
+  await gapi.client.sheets.spreadsheets.values.batchUpdate({ spreadsheetId:CONFIG.SHEET_ID,
+    resource:{ valueInputOption:'RAW', data } });
+}
+
+async function returnQty(row){
+  const x = ledgerByRow(row); if(!x) return;
+  const ans = prompt(`รับคืน ${x.sku} จากร้าน "${x.shop}"\nฝากอยู่ ${x.qty} ชิ้น — คืนกี่ชิ้น?`, x.qty);
+  if(ans===null) return;
+  const n = parseInt(ans);
+  if(isNaN(n)||n<1||n>x.qty){ toast('จำนวนไม่ถูกต้อง (1–'+x.qty+')','err'); return; }
+  try{
+    toast('กำลังบันทึก…');
+    await setLedgerQty(x, x.qty-n, 'คืนครบ '+todayTH());
+    toast(`✅ รับคืน ${x.sku} × ${n} จาก "${x.shop}" เรียบร้อย`,'ok');
+    await reloadAll();
+  }catch(e){ console.error(e); toast('บันทึกไม่สำเร็จ: '+(e.result?.error?.message||e.message||e),'err'); }
+}
+
 async function returnSelected(){
   const rows = [...document.querySelectorAll('.ret-chk:checked')].map(c=>Number(c.dataset.row));
   if(!rows.length) return;
-  if(!confirm(`ยืนยันรับคืนสินค้า ${rows.length} รายการ กลับเข้าร้าน?`)) return;
+  const entries = rows.map(ledgerByRow).filter(Boolean);
+  const totalQty = entries.reduce((a,x)=>a+x.qty,0);
+  if(!confirm(`ยืนยันรับคืน ${entries.length} รายการ (${totalQty} ชิ้น) กลับเข้าร้าน?\n(คืนทั้งจำนวนที่ฝากของแต่ละรายการ)`)) return;
   try{
     toast('กำลังบันทึก…');
-    await gapi.client.sheets.spreadsheets.values.batchClear({
-      spreadsheetId:CONFIG.SHEET_ID,
-      resource:{ ranges: rows.map(r=>`${CONFIG.SHEET}!W${r}`) }
+    const data = [];
+    entries.forEach(x=>{
+      data.push({range:`${CONFIG.LEDGER}!C${x.row}`, values:[[0]]});
+      data.push({range:`${CONFIG.LEDGER}!E${x.row}`, values:[[((x.note||'')+' คืนครบ '+todayTH()).trim()]]});
     });
-    toast(`✅ รับคืน ${rows.length} รายการเรียบร้อย — สินค้ากลับขึ้น catalog แล้ว`,'ok');
+    await gapi.client.sheets.spreadsheets.values.batchUpdate({ spreadsheetId:CONFIG.SHEET_ID,
+      resource:{ valueInputOption:'RAW', data } });
+    toast(`✅ รับคืน ${entries.length} รายการเรียบร้อย`,'ok');
+    await reloadAll();
+  }catch(e){ console.error(e); toast('บันทึกไม่สำเร็จ: '+(e.result?.error?.message||e.message||e),'err'); }
+}
+
+async function sellQty(row){
+  const x = ledgerByRow(row); if(!x) return;
+  const p = prodBySku[x.sku.toLowerCase()];
+  if(!p){ toast('ไม่พบสินค้าในชีต Products','err'); return; }
+  const ansN = prompt(`💰 ขาย ${x.sku} จากร้าน "${x.shop}"\nฝากอยู่ ${x.qty} ชิ้น — ขายกี่ชิ้น?`, '1');
+  if(ansN===null) return;
+  const n = parseInt(ansN);
+  if(isNaN(n)||n<1||n>x.qty){ toast('จำนวนไม่ถูกต้อง (1–'+x.qty+')','err'); return; }
+  const defPrice = (p.promoPrice>0&&p.promoPrice<p.sellPrice?p.promoPrice:p.sellPrice)*n;
+  const ansP = prompt(`ราคาขายรวมของ ${n} ชิ้น (บาท)?`, defPrice);
+  if(ansP===null) return;
+  const total = Number(String(ansP).replace(/,/g,''));
+  if(isNaN(total)||total<0){ toast('ราคาไม่ถูกต้อง','err'); return; }
+  try{
+    toast('กำลังบันทึกการขาย…');
+    // 1) ลดยอดฝาก
+    await setLedgerQty(x, x.qty-n, 'ขายครบ '+todayTH());
+    // 2) ตัดสต็อกรวมใน Products
+    const newStock = Math.max(0, p.stock-n);
+    const status = newStock<=0 ? 'หมดสต็อก' : 'พร้อมขาย';
+    await gapi.client.sheets.spreadsheets.values.update({ spreadsheetId:CONFIG.SHEET_ID,
+      range:`${CONFIG.SHEET}!K${p.row}:L${p.row}`, valueInputOption:'USER_ENTERED',
+      resource:{ values:[[newStock, status]] } });
+    // 3) บันทึกลง Sales
+    const cost = (p.costPrice||0)*n;
+    await gapi.client.sheets.spreadsheets.values.append({ spreadsheetId:CONFIG.SHEET_ID, range:CONFIG.SALES+'!A:A',
+      valueInputOption:'USER_ENTERED', insertDataOption:'INSERT_ROWS',
+      resource:{ values:[[genId(), todayTH(), p.sku, p.name+' (ฝากขาย: '+x.shop+')', n, total, cost, total-cost]] } });
+    toast(`✅ ขาย ${x.sku} × ${n} = ฿${fmtN(total)} (ร้าน ${x.shop}) — ตัดสต็อก+ลงบันทึกขายแล้ว`,'ok');
     await reloadAll();
   }catch(e){ console.error(e); toast('บันทึกไม่สำเร็จ: '+(e.result?.error?.message||e.message||e),'err'); }
 }
 
 /* ═══ รายงาน ═══ */
-const REPORT_COLS = ['sku','picture','name','category','material','weight','gemType','gemWeight','sellPrice','promotionPrice','notes','stock','status'];
-function reportItems(){ return consigned(document.getElementById('filter-shop').value||'all'); }
+const REPORT_COLS = ['sku','picture','name','category','material','weight','gemType','gemWeight','sellPrice','promotionPrice','notes','qtyConsigned','shop','dateOut','status'];
+function reportItems(){
+  const shop = document.getElementById('filter-shop').value || 'all';
+  return activeLedger().filter(x=>shop==='all'||x.shop===shop).map(x=>{
+    const p = prodBySku[x.sku.toLowerCase()] || {};
+    return { ...x, p };
+  });
+}
 function reportTitle(){
   const shop = document.getElementById('filter-shop').value||'all';
   return shop==='all' ? 'ทุกร้าน' : shop;
@@ -320,15 +467,16 @@ function exportPDF(){
   if(!items.length){ toast('ไม่มีรายการให้ออกรายงาน','err'); return; }
   const w = window.open('','_blank');
   w.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>รายงานฝากขาย — ${esc(reportTitle())}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-  @page{size:A4 landscape;margin:10mm}
-  body{font-family:'Sarabun',sans-serif;font-size:11px;color:#1A1A1A;margin:0;padding:16px}
+  @page{size:A4 landscape;margin:9mm}
+  body{font-family:'Sarabun',sans-serif;font-size:10.5px;color:#1A1A1A;margin:0;padding:14px}
   h1{font-size:16px;color:#8A6D2F;margin:0 0 2px}
-  .sub{font-size:11px;color:#666;margin-bottom:12px}
+  .sub{font-size:11px;color:#666;margin-bottom:10px}
   table{width:100%;border-collapse:collapse}
-  th{background:#FBF7EE;color:#8A6D2F;font-size:9px;text-transform:uppercase;padding:5px 6px;border:1px solid #d8c894;text-align:left}
-  td{padding:4px 6px;border:1px solid #ddd;vertical-align:middle}
-  img{width:52px;height:52px;object-fit:cover;border-radius:5px}
+  th{background:#FBF7EE;color:#8A6D2F;font-size:8.5px;text-transform:uppercase;padding:4px 5px;border:1px solid #d8c894;text-align:left}
+  td{padding:3px 5px;border:1px solid #ddd;vertical-align:middle}
+  img{width:48px;height:48px;object-fit:cover;border-radius:4px}
   tr{page-break-inside:avoid}
   .r{text-align:right}
   .btn{position:fixed;top:10px;right:12px;padding:8px 18px;background:#C9A84C;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit}
@@ -336,16 +484,17 @@ function exportPDF(){
   </style></head><body>
   <button class="btn" onclick="window.print()">🖨 พิมพ์ / บันทึก PDF</button>
   <h1>💎 JS Jewelry — รายงานสินค้าฝากขาย</h1>
-  <div class="sub">ร้านปลายทาง: <b>${esc(reportTitle())}</b> · ${items.length} รายการ · ออกรายงาน ${esc(nowTH())}</div>
-  <table><tr>${REPORT_COLS.map(c=>`<th>${c}</th>`).join('')}<tr>
-  ${items.map(p=>`<tr>
-    <td><b>${esc(p.sku)}</b></td>
+  <div class="sub">ร้านปลายทาง: <b>${esc(reportTitle())}</b> · ${items.length} รายการ · ${items.reduce((a,x)=>a+x.qty,0)} ชิ้น · ออกรายงาน ${esc(nowTH())}</div>
+  <table><tr>${REPORT_COLS.map(c=>`<th>${c}</th>`).join('')}</tr>
+  ${items.map(x=>{ const p=x.p;
+    return `<tr>
+    <td><b>${esc(x.sku)}</b></td>
     <td>${p.imageUrl?`<img src="${esc(imgSrc(p.imageUrl))}" onerror="this.style.display='none'">`:''}</td>
-    <td>${esc(p.name)}</td><td>${esc(p.category)}</td><td>${esc(p.material)}</td>
-    <td class="r">${esc(p.weight)}</td><td>${esc(p.gemType)}</td><td class="r">${esc(p.gemWeight)}</td>
-    <td class="r">${fmtN(p.sellPrice)}</td><td class="r">${p.promoPrice?fmtN(p.promoPrice):''}</td>
-    <td>${esc(p.notes)}</td><td class="r">${p.stock}</td><td>${esc(p.status)}</td>
-  </tr>`).join('')}
+    <td>${esc(p.name||'')}</td><td>${esc(p.category||'')}</td><td>${esc(p.material||'')}</td>
+    <td class="r">${esc(p.weight||'')}</td><td>${esc(p.gemType||'')}</td><td class="r">${esc(p.gemWeight||'')}</td>
+    <td class="r">${fmtN(p.sellPrice||'')}</td><td class="r">${p.promoPrice?fmtN(p.promoPrice):''}</td>
+    <td>${esc(p.notes||'')}</td><td class="r"><b>${x.qty}</b></td><td>${esc(x.shop)}</td><td>${esc(x.date)}</td><td>${esc(p.status||'')}</td>
+  </tr>`; }).join('')}
   </table></body></html>`);
   w.document.close();
 }
@@ -359,21 +508,21 @@ async function exportExcel(){
     const ws = wb.addWorksheet('ฝากขาย');
     ws.columns = [
       {header:'sku',width:12},{header:'picture',width:13},{header:'name',width:34},{header:'category',width:11},
-      {header:'material',width:14},{header:'weight',width:8},{header:'gemType',width:14},{header:'gemWeight',width:11},
-      {header:'sellPrice',width:11},{header:'promotionPrice',width:14},{header:'notes',width:32},{header:'stock',width:7},
-      {header:'status',width:11},{header:'consignShop',width:16}
+      {header:'material',width:13},{header:'weight',width:8},{header:'gemType',width:14},{header:'gemWeight',width:11},
+      {header:'sellPrice',width:11},{header:'promotionPrice',width:14},{header:'notes',width:30},
+      {header:'qtyConsigned',width:12},{header:'shop',width:16},{header:'dateOut',width:12},{header:'status',width:11}
     ];
     ws.getRow(1).font = {bold:true};
     ws.getRow(1).fill = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFBF7EE'}};
-    items.forEach(p=>{
-      ws.addRow([p.sku,'',p.name,p.category,p.material,p.weight,p.gemType,p.gemWeight,p.sellPrice,p.promoPrice||'',p.notes,p.stock,p.status,p.consignment]);
+    items.forEach(x=>{ const p=x.p;
+      ws.addRow([x.sku,'',p.name||'',p.category||'',p.material||'',p.weight||'',p.gemType||'',p.gemWeight||'',
+        p.sellPrice||'',p.promoPrice||'',p.notes||'',x.qty,x.shop,x.date,p.status||'']);
     });
-    // ฝังรูปที่ 1 (คอลัมน์ B)
     for(let i=0;i<items.length;i++){
       const rowN = i+2;
       ws.getRow(rowN).height = 64;
       ws.getRow(rowN).alignment = {vertical:'middle',wrapText:true};
-      const id = getImgId(items[i].imageUrl);
+      const id = getImgId(items[i].p.imageUrl);
       if(!id) continue;
       try{
         const r = await fetch(CONFIG.IMG_PROXY+id);

@@ -322,6 +322,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   text-decoration: none; transition: opacity var(--ease);
 }
 .modal-line-btn:hover { opacity: 0.9; }
+.modal-size-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;border-radius:10px;border:1.5px solid rgba(201,168,76,.55);background:#FBF7EE;color:#8A6D2F;font-weight:700;font-size:13.5px;margin-top:8px;text-decoration:none}
+.modal-size-btn:hover{background:#F1EAD8}
 
 /* ── Scroll to Top ── */
 .to-top {
@@ -771,7 +773,7 @@ function openModal(sku) {
 
   const lineMsg = encodeURIComponent(`สนใจสินค้า ${p.sku}`);
   document.getElementById('js-modal-line').innerHTML =
-    `<a class="modal-line-btn" href="https://line.me/R/oaMessage/%40888zbakd/?${lineMsg}" target="_blank" rel="noopener">💬 สอบถาม / สั่งซื้อทาง LINE</a>`;
+    `<a class="modal-line-btn" href="https://line.me/R/oaMessage/%40888zbakd/?${lineMsg}" target="_blank" rel="noopener">💬 สอบถาม / สั่งซื้อทาง LINE</a>` + (p.category === 'แหวน' ? `<a class="modal-size-btn" href="/article/ring-size" target="_blank" rel="noopener">📏 ไม่รู้ไซส์? ดูวิธีวัดไซส์แหวน</a>` : '');
 
   const rows = [];
   if (p.material) rows.push(['วัสดุ', p.material]);

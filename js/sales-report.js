@@ -4,6 +4,8 @@
 //  อ่านแท็บ Sales (A:H) อย่างเดียว — ไม่เขียนอะไรลงชีต
 //  ช่องทาง detect จากชื่อสินค้าที่ลงท้าย "(ฝากขาย: ร้าน)"
 //    (ปุ่ม 💰 ในหน้า consignment.html เติมให้ตอนขายของฝากขาย)
+//  รูปสินค้า: map SKU → รูปที่ 1 จากแท็บ Products (M) / Gems (L)
+//    ผ่าน proxy /img/ — ฝังทั้งพรีวิว / PDF / Excel
 //  ปุ่มเรียก: srRender() / srExportPDF() / srExportExcel()
 //  ใช้ CONFIG (js/config.js) + gapi (โหลดโดย index.html) + showToast
 // ============================================================
@@ -13,6 +15,31 @@ function srEsc(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</
 function srBaht(n){ return '฿'+Number(n||0).toLocaleString('th-TH'); }
 function srToast(msg,type){ if(typeof showToast==='function') showToast(msg,type); else console.log(msg); }
 function srVal(id){ const el=document.getElementById(id); return el?el.value:''; }
+
+// ─── รูปสินค้า ───
+const SR_IMG_PROXY = 'https://jsjewelry.pages.dev/img/';
+function srImgId(url){ if(!url) return ''; let m;
+  if((m=String(url).match(/\/d\/([a-zA-Z0-9_-]{10,})/))) return m[1];
+  if((m=String(url).match(/[?&]id=([a-zA-Z0-9_-]{10,})/))) return m[1];
+  return ''; }
+
+// map sku(lowercase) → Drive fileId ของรูปที่ 1 (โหลดครั้งเดียวต่อการเปิดหน้า)
+let srImgCache = null;
+async function srImageMap(){
+  if(srImgCache) return srImgCache;
+  const map = {};
+  try{
+    const pr = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: CONFIG.SHEET_ID, range: CONFIG.PRODUCTS_SHEET + '!A:M' });
+    (pr.result.values||[]).slice(1).forEach(r=>{ const k=(r[1]||'').trim().toLowerCase(); const id=srImgId(r[12]||''); if(k&&id&&!map[k]) map[k]=id; });
+  }catch(e){ console.warn('srImageMap products fail', e); }
+  try{
+    const gr = await gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: CONFIG.SHEET_ID, range: CONFIG.GEMS_SHEET + '!A:L' });
+    (gr.result.values||[]).slice(1).forEach(r=>{ const k=(r[1]||'').trim().toLowerCase(); const id=srImgId(r[11]||''); if(k&&id&&!map[k]) map[k]=id; });
+  }catch(e){ console.warn('srImageMap gems fail', e); }
+  srImgCache = map;
+  return map;
+}
+function srImg(map, sku){ return map[String(sku||'').trim().toLowerCase()] || ''; }
 
 // วันที่ในชีตเก็บเป็น "DD/MM/พ.ศ." (เช่น 03/07/2569) → แปลงเป็น ISO "YYYY-MM-DD" (ค.ศ.) เพื่อเทียบช่วง
 function srToISO(d){
@@ -106,7 +133,7 @@ async function srRender(){
   const el = document.getElementById('sr-container');
   if(el) el.innerHTML = '<div class="loading"><div class="spinner"></div>กำลังโหลด…</div>';
   try{
-    const all = await srFetchAll();
+    const [all, imgMap] = await Promise.all([srFetchAll(), srImageMap()]);
     srFillShops(all);
     const rows = srApplyFilter(all);
     if(!rows.length){ if(el) el.innerHTML='<div class="empty"><div class="ic">📊</div>ไม่มีรายการตามเงื่อนไข</div>'; return; }
@@ -117,13 +144,17 @@ async function srRender(){
       + '<div class="stat"><div class="v">'+srBaht(grand.sell)+'</div><div class="l">ยอดขายรวม</div></div>'
       + '<div class="stat"><div class="v" style="color:var(--green)">'+srBaht(grand.profit)+'</div><div class="l">กำไรรวม</div></div>'
       + '</div>';
+    const imgTd = x => {
+      const id = srImg(imgMap, x.sku);
+      return '<td>'+(id?'<img src="'+SR_IMG_PROXY+id+'" style="width:44px;height:44px;object-fit:cover;border-radius:4px;display:block" loading="lazy" onerror="this.style.display=\'none\'">':'')+'</td>';
+    };
     const section = (label, list) => {
       const s = srSum(list);
       return '<div style="margin:14px 0 6px;font-weight:700;color:var(--gold)">'+srEsc(label)
         + '<span style="font-weight:400;color:var(--muted);font-size:13px"> — '+s.n+' รายการ · '+s.qty+' ชิ้น · ยอด '+srBaht(s.sell)+' · กำไร '+srBaht(s.profit)+'</span></div>'
-        + '<div class="tw"><table><thead><tr><th>วันที่</th><th>รหัส</th><th>สินค้า</th><th>จำนวน</th><th>ราคา/ชิ้น</th><th>ยอดรวม</th><th>กำไร</th></tr></thead><tbody>'
+        + '<div class="tw"><table><thead><tr><th>วันที่</th><th>รหัส</th><th>รูป</th><th>สินค้า</th><th>จำนวน</th><th>ราคา/ชิ้น</th><th>ยอดรวม</th><th>กำไร</th></tr></thead><tbody>'
         + list.slice().reverse().map(x=>'<tr>'
-          + '<td>'+srEsc(x.date)+'</td><td>'+srEsc(x.sku)+'</td><td>'+srEsc(x.cleanName)+'</td>'
+          + '<td>'+srEsc(x.date)+'</td><td>'+srEsc(x.sku)+'</td>'+imgTd(x)+'<td>'+srEsc(x.cleanName)+'</td>'
           + '<td>'+x.qty+'</td><td>'+srBaht(x.sellPrice)+'</td><td>'+srBaht(x.sellPrice*x.qty)+'</td>'
           + '<td style="color:var(--green)">'+srBaht(x.profit)+'</td></tr>').join('')
         + '</tbody></table></div>';
@@ -141,7 +172,8 @@ async function srRender(){
 async function srExportPDF(){
   try{
     srToast('กำลังเตรียมรายงาน PDF…');
-    const rows = srApplyFilter(await srFetchAll());
+    const [all, imgMap] = await Promise.all([srFetchAll(), srImageMap()]);
+    const rows = srApplyFilter(all);
     if(!rows.length){ srToast('ไม่มีรายการตามเงื่อนไข','error'); return; }
     const g = srGroup(rows), grand = srSum(rows);
     const now = new Date().toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'});
@@ -149,11 +181,16 @@ async function srExportPDF(){
     const secHtml = (label, list) => {
       const s = srSum(list);
       return '<h2>'+srEsc(label)+'</h2>'
-      + '<table><tr><th>วันที่</th><th>รหัส</th><th>สินค้า</th><th class="r">จำนวน</th><th class="r">ราคา/ชิ้น</th><th class="r">ยอดรวม</th><th class="r">กำไร</th></tr>'
-      + list.slice().reverse().map(x=>'<tr><td>'+srEsc(x.date)+'</td><td>'+srEsc(x.sku)+'</td><td>'+srEsc(x.cleanName)+'</td>'
-        + '<td class="r">'+x.qty+'</td><td class="r">'+srBaht(x.sellPrice)+'</td><td class="r">'+srBaht(x.sellPrice*x.qty)+'</td>'
-        + '<td class="r green">'+srBaht(x.profit)+'</td></tr>').join('')
-      + '<tr class="sub"><td colspan="3">รวม '+srEsc(label)+'</td><td class="r">'+s.qty+'</td><td></td><td class="r">'+srBaht(s.sell)+'</td><td class="r">'+srBaht(s.profit)+'</td></tr>'
+      + '<table><tr><th>วันที่</th><th>รหัส</th><th>รูป</th><th>สินค้า</th><th class="r">จำนวน</th><th class="r">ราคา/ชิ้น</th><th class="r">ยอดรวม</th><th class="r">กำไร</th></tr>'
+      + list.slice().reverse().map(x=>{
+          const id = srImg(imgMap, x.sku);
+          return '<tr><td>'+srEsc(x.date)+'</td><td>'+srEsc(x.sku)+'</td>'
+          + '<td>'+(id?'<img src="'+SR_IMG_PROXY+id+'" onerror="this.style.display=\'none\'">':'')+'</td>'
+          + '<td>'+srEsc(x.cleanName)+'</td>'
+          + '<td class="r">'+x.qty+'</td><td class="r">'+srBaht(x.sellPrice)+'</td><td class="r">'+srBaht(x.sellPrice*x.qty)+'</td>'
+          + '<td class="r green">'+srBaht(x.profit)+'</td></tr>';
+        }).join('')
+      + '<tr class="sub"><td colspan="4">รวม '+srEsc(label)+'</td><td class="r">'+s.qty+'</td><td></td><td class="r">'+srBaht(s.sell)+'</td><td class="r">'+srBaht(s.profit)+'</td></tr>'
       + '</table>';
     };
     let bodyHtml = '';
@@ -173,7 +210,8 @@ async function srExportPDF(){
 + '.tot b{color:#8A6D2F}'
 + 'table{width:100%;border-collapse:collapse;margin-bottom:8px}'
 + 'th{background:#FBF7EE;color:#8A6D2F;font-size:9px;text-transform:uppercase;padding:4px 6px;border:1px solid #d8c894;text-align:left}'
-+ 'td{padding:3px 6px;border:1px solid #ddd}'
++ 'td{padding:3px 6px;border:1px solid #ddd;vertical-align:middle}'
++ 'img{width:48px;height:48px;object-fit:cover;border-radius:4px}'
 + '.r{text-align:right}'
 + '.green{color:#127a3e}'
 + 'tr.sub td{background:#f4efe0;font-weight:700}'
@@ -209,37 +247,59 @@ function srLoadExcelJS(){
 
 async function srExportExcel(){
   try{
-    srToast('กำลังสร้าง Excel…');
+    srToast('กำลังสร้าง Excel + ดึงรูปสินค้า… (อาจใช้เวลาสักครู่)');
     await srLoadExcelJS();
-    const rows = srApplyFilter(await srFetchAll());
+    const [all, imgMap] = await Promise.all([srFetchAll(), srImageMap()]);
+    const rows = srApplyFilter(all);
     if(!rows.length){ srToast('ไม่มีรายการตามเงื่อนไข','error'); return; }
     const g = srGroup(rows), grand = srSum(rows);
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('รายงานการขาย');
     ws.columns = [
-      {header:'วันที่',width:13},{header:'รหัส',width:12},{header:'สินค้า',width:34},
+      {header:'วันที่',width:13},{header:'รหัส',width:12},{header:'picture',width:13},{header:'สินค้า',width:34},
       {header:'ช่องทาง',width:11},{header:'ร้านฝากขาย',width:16},{header:'จำนวน',width:8},
       {header:'ราคา/ชิ้น',width:12},{header:'ยอดรวม',width:13},{header:'กำไร',width:13}
     ];
     const hdr = ws.getRow(1); hdr.font={bold:true}; hdr.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFBF7EE'}};
 
     const GOLD={type:'pattern',pattern:'solid',fgColor:{argb:'FFF4EFE0'}};
+    const imgRows = [];   // {rowN, id} รูปที่ต้องฝังหลังสร้างตารางเสร็จ
     const addGroup = (label, list) => {
       const s = srSum(list);
       const lr = ws.addRow([label]); lr.font={bold:true,color:{argb:'FF8A6D2F'}};
       list.slice().reverse().forEach(x=>{
-        ws.addRow([x.date, x.sku, x.cleanName, x.channel, x.shop||'', x.qty, x.sellPrice, x.sellPrice*x.qty, x.profit]);
+        const row = ws.addRow([x.date, x.sku, '', x.cleanName, x.channel, x.shop||'', x.qty, x.sellPrice, x.sellPrice*x.qty, x.profit]);
+        row.height = 64; row.alignment = {vertical:'middle',wrapText:true};
+        const id = srImg(imgMap, x.sku);
+        if(id) imgRows.push({rowN: row.number, id: id});
       });
-      const sr = ws.addRow(['','','รวม '+label,'','', s.qty, '', s.sell, s.profit]);
+      const sr = ws.addRow(['','','','รวม '+label,'','', s.qty, '', s.sell, s.profit]);
       sr.font={bold:true}; sr.eachCell(c=>{ c.fill=GOLD; });
       ws.addRow([]);
     };
     if(g.own.length) addGroup('🏪 ขายเอง', g.own);
     Object.keys(g.shops).sort().forEach(sh=>{ addGroup('🤝 ฝากขาย: '+sh, g.shops[sh]); });
-    const tr = ws.addRow(['','','รวมทั้งหมด','','', grand.qty, '', grand.sell, grand.profit]);
+    const tr = ws.addRow(['','','','รวมทั้งหมด','','', grand.qty, '', grand.sell, grand.profit]);
     tr.font={bold:true,size:12}; tr.eachCell(c=>{ c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE9DCB0'}}; });
 
-    [7,8,9].forEach(col=>{ ws.getColumn(col).numFmt='#,##0'; });
+    [8,9,10].forEach(col=>{ ws.getColumn(col).numFmt='#,##0'; });
+
+    // ฝังรูป (cache buffer ต่อ fileId — SKU เดิมขายซ้ำไม่ต้องโหลดใหม่)
+    const bufCache = {};
+    let done = 0;
+    for(const it of imgRows){
+      try{
+        if(!(it.id in bufCache)){
+          const r = await fetch(SR_IMG_PROXY+it.id);
+          bufCache[it.id] = r.ok ? await r.arrayBuffer() : null;
+        }
+        if(!bufCache[it.id]) continue;
+        const imgId = wb.addImage({buffer:bufCache[it.id], extension:'jpeg'});
+        ws.addImage(imgId, {tl:{col:2.08,row:it.rowN-0.97}, ext:{width:80,height:80}, editAs:'oneCell'});
+        done++;
+        if(done % 25 === 0) srToast('ดึงรูปแล้ว '+done+' รูป…');
+      }catch(e){ console.warn('img fail', it.id, e); }
+    }
 
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
@@ -249,6 +309,6 @@ async function srExportExcel(){
     a.download = 'sales_'+ch.replace('shop:','')+'_'+new Date().toISOString().slice(0,10)+'.xlsx';
     a.click();
     URL.revokeObjectURL(a.href);
-    srToast('✅ ดาวน์โหลด Excel เรียบร้อย ('+grand.n+' รายการ)');
+    srToast('✅ ดาวน์โหลด Excel เรียบร้อย ('+grand.n+' รายการ, รูป '+done+')');
   }catch(e){ console.error(e); srToast('สร้าง Excel ไม่สำเร็จ: '+((e.result&&e.result.error&&e.result.error.message)||e.message||e),'error'); }
 }

@@ -330,7 +330,25 @@ tr.clickable{cursor:pointer}
         </div>
         <div style="color:var(--muted);font-size:12px">เลือกเงื่อนไขแล้วกดออกรายงาน · รูปสินค้ารูปที่ 1 แนบไปทั้ง PDF และ Excel · คอลัมน์: sku, picture, name, category, material, weight, gemType, gemWeight, costPrice, sellPrice, promotionPrice, notes, stock, status, ฝากขาย</div>
       </div>
-    </div>
+    <div class="card" style="margin-top:16px">
+        <div class="card-title">📈 รายงานการขาย — แยกช่องทาง (PDF / Excel)</div>
+        <div class="sbar" style="flex-wrap:wrap">
+          <input type="date" id="sr-from">
+          <span style="color:var(--muted);font-size:13px">ถึง</span>
+          <input type="date" id="sr-to">
+          <select id="sr-channel">
+            <option value="all">ทุกช่องทาง</option>
+            <option value="own">ขายเอง</option>
+            <option value="consign">ฝากขาย (ทุกร้าน)</option>
+          </select>
+          <button class="btn bo sm" onclick="srRender()">🔍 พรีวิว</button>
+          <button class="btn bo sm" onclick="srExportPDF()">📄 PDF</button>
+          <button class="btn bo sm" onclick="srExportExcel()">📊 Excel</button>
+        </div>
+        <div id="sr-container"></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px">แยก ขายเอง / ฝากขาย(รายร้าน) จากชื่อสินค้าที่ลงท้าย (ฝากขาย: ร้าน) · สรุปยอด+กำไรต่อกลุ่มและต่อร้าน · อ่านจากแท็บ Sales อย่างเดียว</div>
+      </div>
+      </div>
   </main>
 </div>
 
@@ -1367,5 +1385,6 @@ function showToast(msg, type='') {
 }
 </script>
 <script src="js/report.js"></script>
+  <script src="js/sales-report.js"></script>
 </body>
 </html>

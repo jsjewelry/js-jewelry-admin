@@ -95,6 +95,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 .pill:hover { border-color: var(--gold-d); color: var(--gold-d); }
 .pill.active { background: var(--gold); color: #fff; border-color: var(--gold); }
+.pill .pill-count { opacity: 0.55; font-weight: 500; margin-left: 3px; } /* ✏️ เพิ่มใหม่: จำนวนสินค้าต่อหมวด */
 
 .sort-wrap { display: flex; gap: 6px; }
 .sort-btn {
@@ -327,7 +328,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* ── Scroll to Top ── */
 .to-top {
-  position: fixed; bottom: 24px; right: 24px; z-index: 200;
+  position: fixed; bottom: 94px; right: 24px; z-index: 200; /* ✏️ แก้ไข: ขยับขึ้น เปิดที่ให้ปุ่ม LINE */
   background: var(--gold); color: #111;
   width: 42px; height: 42px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -336,6 +337,40 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 .to-top.show { opacity: 1; pointer-events: auto; }
 .to-top:hover { transform: translateY(-3px); }
+
+/* ── ✏️ เพิ่มใหม่: ปุ่ม LINE ลอย (หน้ารวมสินค้า) ── */
+.line-fab {
+  position: fixed; bottom: 24px; right: 24px; z-index: 210;
+  width: 58px; height: 58px; border-radius: 50%;
+  background: #06C755; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; letter-spacing: 0.3px;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(6,199,85,0.4);
+  transition: transform var(--ease);
+}
+.line-fab:hover { transform: translateY(-3px); }
+
+/* ── ✏️ เพิ่มใหม่: ปุ่มแชร์ / ป้ายวิดีโอ / บรรทัดรับประกัน (ป็อปอัปสินค้า) ── */
+.modal-share {
+  position: absolute; top: 12px; left: 12px; z-index: 10;
+  background: rgba(0,0,0,0.55); color: #fff;
+  height: 34px; padding: 0 14px; border-radius: 999px;
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 600;
+  transition: background var(--ease);
+}
+.modal-share:hover { background: rgba(0,0,0,0.8); }
+.modal-video-chip {
+  position: absolute; bottom: 12px; right: 12px; z-index: 9;
+  align-items: center; gap: 6px;
+  background: rgba(0,0,0,0.65); color: #fff;
+  font-size: 12px; font-weight: 700; padding: 7px 12px;
+  border-radius: 999px; text-decoration: none;
+  transition: background var(--ease);
+}
+.modal-video-chip:hover { background: rgba(0,0,0,0.85); }
+.trust-line { text-align: center; font-size: 12px; font-weight: 600; color: var(--gold-d); margin: -4px 0 14px; }
 
 /* ── Footer ── */
 .site-footer {
@@ -351,7 +386,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   .nav-search { order: 5; flex-basis: 100%; max-width: none; margin-left: 0; }
   .nav-count { display: none; }
   .filter-bar { top: 0; }
-  .filter-inner { padding: 10px 16px; }
+  /* ✏️ แก้ไข: มือถือ — แยกแถวหมวดหมู่ออกจากปุ่มเรียงราคา ไม่เบียดกัน */
+  .filter-inner { padding: 10px 16px; flex-direction: column; align-items: stretch; gap: 8px; }
+  .sort-wrap { justify-content: flex-end; }
   .catalog-wrap { padding: 16px 14px 70px; }
   .modal-body { padding: 18px 20px 24px; }
   .modal-name { font-size: 18px; }
@@ -362,7 +399,11 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .intro { max-width:1400px; margin:0 auto; padding:22px 28px 0; }
 .intro-title { font-size:20px; font-weight:700; color:var(--gold-d); letter-spacing:.3px; line-height:1.35; }
 .intro-sub { font-size:13px; color:var(--text-2); margin-top:6px; line-height:1.65; max-width:840px; }
-@media (max-width:600px){ .intro{padding:16px 14px 0} .intro-title{font-size:17px} }
+/* ✏️ เพิ่มใหม่: ป้ายความน่าเชื่อถือใต้หัวข้อ */
+.trust-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.trust-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 8px; background: var(--gold-bg); border: 1px solid rgba(201,168,76,0.35); color: var(--gold-d); }
+.trust-badge.green { background: rgba(92,186,125,0.10); border-color: rgba(92,186,125,0.35); color: #2d7a50; }
+@media (max-width:600px){ .intro{padding:16px 14px 0} .intro-title{font-size:17px} .intro-sub{display:none} /* ✏️ มือถือ: ซ่อนย่อหน้ายาว ใช้ป้ายแทน */ }
 </style>
 </head>
 <body>
@@ -400,6 +441,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     <section class="intro">
       <h1 class="intro-title">เครื่องประดับเงินแท้ 925 &amp; พลอยแท้ by JS Jewelry</h1>
       <p class="intro-sub">JS Jewelry คัดสรรแหวน ต่างหู สร้อยคอ กำไล และจี้ เงินแท้ 925 รวมถึงพลอยแท้หลากสี ดีไซน์ทันสมัย คุณภาพดี ราคาเข้าถึงได้ พร้อมส่งทั่วไทย · สอบถามและสั่งซื้อผ่าน LINE ได้เลย</p>
+      <!-- ✏️ เพิ่มใหม่: ป้ายความน่าเชื่อถือ (สแกนตาได้เร็ว โดยเฉพาะบนมือถือ) -->
+      <div class="trust-row" aria-label="จุดเด่นของร้าน">
+        <span class="trust-badge">◆ เงินแท้ 925</span>
+        <span class="trust-badge">◆ พลอยแท้จันทบุรี</span>
+        <span class="trust-badge green">✓ พร้อมส่งทั่วไทย</span>
+        <span class="trust-badge green">✓ ร้านจริง จ.จันทบุรี</span>
+      </div>
     </section>
   <div class="result-info" id="js-result-info"></div>
   <div class="grid" id="js-grid"></div>
@@ -416,6 +464,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     <div class="modal-img-wrap">
       <div id="js-modal-img-wrap"></div>
       <button class="modal-close" id="js-modal-close">✕</button>
+      <!-- ✏️ เพิ่มใหม่: ปุ่มแชร์ + ป้ายวิดีโอบนรูป -->
+      <button class="modal-share" id="js-modal-share" title="แชร์สินค้าให้เพื่อน">↗ แชร์</button>
+      <a class="modal-video-chip" id="js-modal-video-chip" target="_blank" rel="noopener" style="display:none">▶ ดูวิดีโอ</a>
     </div>
     <div class="modal-body">
       <div class="modal-cat"  id="js-modal-cat"></div>
@@ -435,6 +486,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     </div>
   </div>
 </div>
+
+<!-- ✏️ เพิ่มใหม่: ปุ่ม LINE ลอย -->
+<a class="line-fab" id="js-line-fab" href="https://line.me/R/ti/p/@888zbakd" target="_blank" rel="noopener" aria-label="สอบถาม / สั่งซื้อทาง LINE">LINE</a>
 
 <button class="to-top" id="js-top" title="กลับด้านบน">↑</button>
 
@@ -581,6 +635,7 @@ function getImages(p) {
    🗂️  STATE
 ══════════════════════════════════════════════ */
 let all = [], activeCat = 'all', query = '', sortBy = 'default';
+let currentSku = null; // ✏️ เพิ่มใหม่: จำ SKU ที่เปิดอยู่ (ใช้ตอนแชร์)
 
 // สุ่มลำดับสินค้า (Fisher–Yates) — เปิดหน้ามาแล้วสุ่มใหม่ทุกครั้ง
 function shuffle(a) {
@@ -674,11 +729,14 @@ function buildPills() {
   const ordered = CAT_ORDER.filter(c => inData.has(c));
   const rest    = [...inData].filter(c => !CAT_ORDER.includes(c));
   const cats    = ['all', ...ordered, ...rest];
+  // ✏️ เพิ่มใหม่: นับจำนวนสินค้าต่อหมวด แสดงในปุ่ม
+  const counts  = {};
+  all.forEach(p => { counts[p.category] = (counts[p.category] || 0) + 1; });
 
   document.getElementById('js-pills').innerHTML = cats.map(c => `
     <button class="pill${c === activeCat ? ' active' : ''}" data-cat="${c}"
             onclick="setCat('${c}')">
-      ${c === 'all' ? '✦ ทั้งหมด' : (CAT_EMOJI[c]||'') + ' ' + c}
+      ${c === 'all' ? '✦ ทั้งหมด' : (CAT_EMOJI[c]||'') + ' ' + c}<span class="pill-count">${c === 'all' ? all.length : (counts[c] || 0)}</span>
     </button>`).join('');
 }
 
@@ -750,6 +808,7 @@ function carSwipeInit() {
 function openModal(sku) {
   const p = all.find(x => x.sku === sku);
   if (!p) return;
+  currentSku = sku; // ✏️ เพิ่มใหม่
   const emoji  = CAT_EMOJI[p.category] || '💎';
 
   // รูปทั้งหมด → carousel (ถ้ามีรูปเดียวจะโชว์ปกติ)
@@ -771,15 +830,17 @@ function openModal(sku) {
     priceEl.textContent = fmtPrice(p.sellPrice);
   }
 
-  const lineMsg = encodeURIComponent(`สนใจสินค้า ${p.sku}`);
+  const lineMsg = encodeURIComponent(`สนใจสินค้า ${p.sku} ${p.name}`); // ✏️ แก้ไข: แนบชื่อสินค้าในข้อความด้วย
+  // ✏️ เพิ่มใหม่: บรรทัดรับประกันใต้ปุ่ม LINE (จุดที่ลูกค้ากำลังตัดสินใจ)
+  const trustLine = `<div class="trust-line">◆ ${p.category === 'พลอย' ? 'พลอยแท้ ยินดีให้ตรวจสอบ' : 'รับประกันเงินแท้ 925 ทุกชิ้น · ยินดีให้ตรวจสอบ'}</div>`;
   document.getElementById('js-modal-line').innerHTML =
-    `<a class="modal-line-btn" href="https://line.me/R/oaMessage/%40888zbakd/?${lineMsg}" target="_blank" rel="noopener">💬 สอบถาม / สั่งซื้อทาง LINE</a>` + (p.category === 'แหวน' ? `<a class="modal-size-btn" href="/article/ring-size" target="_blank" rel="noopener">📏 ไม่รู้ไซส์? ดูวิธีวัดไซส์แหวน</a>` : '');
+    `<a class="modal-line-btn" href="https://line.me/R/oaMessage/%40888zbakd/?${lineMsg}" target="_blank" rel="noopener">💬 สอบถาม / สั่งซื้อทาง LINE</a>` + trustLine + (p.category === 'แหวน' ? `<a class="modal-size-btn" href="/article/ring-size" target="_blank" rel="noopener">📏 ไม่รู้ไซส์? ดูวิธีวัดไซส์แหวน</a>` : '');
 
   const rows = [];
   if (p.material) rows.push(['วัสดุ', p.material]);
-  if (p.weight && p.weight !== '-') rows.push(['น้ำหนัก', p.weight + ' กรัม']);
+  if (p.weight && p.weight !== '-') rows.push([(p.material || '').includes('เงิน') ? 'น้ำหนักเงิน' : 'น้ำหนักตัวเรือน', p.weight + ' กรัม']); // ✏️ แก้ไข: ระบุให้ชัด
   if (p.gemType && p.gemType !== '-') rows.push(['อัญมณี', p.gemType]);
-  if (p.gemWeight && p.gemWeight !== '-') rows.push(['น้ำหนัก', p.gemWeight + ' กะรัต']);
+  if (p.gemWeight && p.gemWeight !== '-') rows.push(['น้ำหนักพลอย', p.gemWeight + ' กะรัต']); // ✏️ แก้ไข: ไม่ให้ซ้ำกับน้ำหนักเงิน
   if (p.shape && p.shape !== '-') rows.push(['รูปทรง', p.shape]);
   if (p.pieces) rows.push(['จำนวนเม็ด', p.pieces + ' เม็ด']);
   if (p.size && p.size !== '-') rows.push(['ขนาด', p.size]);
@@ -790,10 +851,12 @@ function openModal(sku) {
       <span class="modal-val">${v}</span>
     </div>`).join('');
 
+  // ✏️ แก้ไข: วิดีโอเป็นป้ายเล็กบนรูป แทนปุ่มแดงใหญ่ท้ายป็อปอัป (ให้ LINE เป็นปุ่มหลักเดียว)
   const vurl = (p.videoUrl || '').trim();
-  document.getElementById('js-modal-video').innerHTML = vurl
-    ? `<a class="modal-video-btn" href="${vurl}" target="_blank" rel="noopener">▶ ดูวิดีโอ</a>`
-    : '';
+  const vchip = document.getElementById('js-modal-video-chip');
+  if (vurl) { vchip.href = vurl; vchip.style.display = 'flex'; }
+  else { vchip.style.display = 'none'; }
+  document.getElementById('js-modal-video').innerHTML = '';
 
   document.getElementById('js-modal').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -874,6 +937,28 @@ window.addEventListener('scroll', () => {
   document.getElementById('js-top').classList.toggle('show', scrollY > 320);
 }, { passive: true });
 document.getElementById('js-top').addEventListener('click', () => scrollTo({ top:0, behavior:'smooth' }));
+
+/* ✏️ เพิ่มใหม่: ปุ่มแชร์สินค้า (Web Share บนมือถือ / คัดลอกลิงก์บนคอม) */
+document.getElementById('js-modal-share').addEventListener('click', async () => {
+  const p = all.find(x => x.sku === currentSku);
+  if (!p) return;
+  const url = location.origin + '/p/' + encodeURIComponent(p.sku);
+  const shareData = { title: p.name, text: `${p.name} (${p.sku}) — JS Jewelry`, url };
+  if (navigator.share) {
+    try { await navigator.share(shareData); } catch (e) { /* ผู้ใช้กดยกเลิกเอง */ }
+  } else {
+    try {
+      await navigator.clipboard.writeText(url);
+      const b = document.getElementById('js-modal-share');
+      b.textContent = 'คัดลอกลิงก์แล้ว ✓';
+      setTimeout(() => { b.textContent = '↗ แชร์'; }, 1600);
+    } catch (e) {}
+  }
+});
+
+/* ✏️ เพิ่มใหม่: ปุ่ม LINE ลอย — เปิด LINE พร้อมข้อความรอส่ง */
+document.getElementById('js-line-fab').href =
+  'https://line.me/R/oaMessage/%40888zbakd/?' + encodeURIComponent('สนใจสอบถามสินค้าค่ะ');
 
 init();
 </script>

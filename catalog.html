@@ -43,6 +43,7 @@
 /* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
+html, body { overflow-x: clip; }
 body { font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--text-1); min-height: 100vh; }
 img  { display: block; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; }
@@ -387,7 +388,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   .nav-count { display: none; }
   .filter-bar { top: 0; }
   /* ✏️ แก้ไข: มือถือ — แยกแถวหมวดหมู่ออกจากปุ่มเรียงราคา ไม่เบียดกัน */
-  .filter-inner { padding: 10px 16px; flex-direction: column; align-items: stretch; gap: 8px; }
+  .filter-inner { padding: 10px 16px; flex-direction: column; align-items: stretch; gap: 8px;  flex-wrap: nowrap; }
   .sort-wrap { justify-content: flex-end; }
   .catalog-wrap { padding: 16px 14px 70px; }
   .modal-body { padding: 18px 20px 24px; }

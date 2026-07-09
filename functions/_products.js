@@ -115,7 +115,7 @@ export function renderProductPage(p){
   const priceHtml = promo ? `<span class="old">${fmtPrice(p.sellPrice)}</span><span class="price promo">${fmtPrice(price)}</span><span class="badge">-${off}%</span>` : `<span class="price">${fmtPrice(price)}</span>`;
   const rowsHtml = rows.map(([l,v])=>`<div class="row"><span class="l">${esc(l)}</span><span class="v">${esc(v)}</span></div>`).join('');
   const descHtml = desc ? `<div class="desc">${esc(desc)}</div>` : '';
-  const videoHtml = vurl ? `<a class="video-btn" href="${esc(vurl)}" target="_blank" rel="noopener">▶ ดูวิดีโอ</a>` : '';
+  const videoHtml = vurl ? `<a class="video-chip" href="${esc(vurl)}" target="_blank" rel="noopener">▶ ดูวิดีโอ</a>` : '';
   const sizeHtml = p.category==='แหวน' ? `<a class="size-btn" href="/article/ring-size">📏 ไม่รู้ไซส์? ดูวิธีวัดไซส์แหวน</a>` : '';
 
   return `<!DOCTYPE html>
@@ -165,7 +165,9 @@ h1{font-size:24px;font-weight:700;line-height:1.3;margin-bottom:4px}
 .row .v{color:var(--t1);font-weight:500;flex:1}
 .desc{font-size:14px;color:var(--t2);background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;white-space:pre-line}
 .line-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:10px;background:#06C755;color:#fff;font-weight:700;font-size:15px;margin-bottom:10px}
-.video-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border-radius:10px;background:#C0271E;color:#fff;font-weight:700;font-size:15px;margin-bottom:10px}
+.img-wrap{position:relative}
+.video-chip{position:absolute;bottom:12px;right:12px;z-index:5;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.65);color:#fff;font-size:12px;font-weight:700;padding:7px 12px;border-radius:999px;text-decoration:none;transition:background .22s ease}
+.video-chip:hover{background:rgba(0,0,0,.85)}
 .size-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;border:1.5px solid rgba(201,168,76,.55);background:var(--gold-bg);color:var(--gold-d);font-weight:700;font-size:14px;margin-bottom:10px}
 .back{display:inline-block;font-size:13px;color:var(--gold-d);font-weight:600}
 .footer{background:linear-gradient(135deg,#2B1A0E,#3E2A1A);color:rgba(255,255,255,.4);text-align:center;padding:22px;font-size:12px;letter-spacing:.5px}.footer span{color:var(--gold)}
@@ -177,7 +179,7 @@ h1{font-size:24px;font-weight:700;line-height:1.3;margin-bottom:4px}
 <nav class="crumb"><a href="/catalog">หน้ารวมสินค้า</a> › ${esc(p.category)} › ${esc(p.name)}</nav>
 <div class="grid">
   <div>
-    <img class="main" src="${esc(mainImg)}" alt="${esc(p.name+' '+(p.material||'')+' JS Jewelry')}">
+    <div class="img-wrap"><img class="main" src="${esc(mainImg)}" alt="${esc(p.name+' '+(p.material||'')+' JS Jewelry')}">${videoHtml}</div>
     ${thumbs}
   </div>
   <div>
@@ -191,7 +193,6 @@ h1{font-size:24px;font-weight:700;line-height:1.3;margin-bottom:4px}
     <div class="rows">${rowsHtml}</div>
     ${descHtml}
     <a class="line-btn" href="${LINE_URL}${encodeURIComponent(lineMsg)}" target="_blank" rel="noopener">💬 สอบถาม / สั่งซื้อทาง LINE</a>
-    ${videoHtml}
     ${sizeHtml}
     <a class="back" href="/catalog">← ดูสินค้าอื่นทั้งหมด</a>
   </div>

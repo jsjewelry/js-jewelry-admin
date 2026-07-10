@@ -1,3 +1,4 @@
+// D1 binding: ANALYTICS (redeploy trigger 2026-07-10)
 // GET /api/stats — สถิติเข้าชมเว็บ (อ่านจาก D1 binding: ANALYTICS)
 // เวลาไทย = UTC+7 → bucket รายวันใช้ date(ts,'+7 hours')
 export async function onRequestGet({ env }) {

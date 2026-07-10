@@ -207,8 +207,8 @@ tr.clickable{cursor:pointer}
         <div id="cat-counts"><div class="loading"><div class="spinner"></div>กำลังโหลด…</div></div>
       </div>
       <div class="card">
-        <div class="card-title">📊 รายงานขายออก — 30 วันล่าสุด</div>
-        <div id="monthly-out"><div class="loading"><div class="spinner"></div>กำลังโหลด…</div></div>
+        <div class="card-title">🌐 สถิติผู้เข้าชมเว็บ (jsjewelry.pages.dev)</div>
+        <div id="web-stats"><div class="loading"><div class="spinner"></div>กำลังโหลด…</div></div>
       </div>
     </div>
 
@@ -633,7 +633,7 @@ function dashParseDate(str){
 
 function renderDash(){
   renderCatCounts();
-  renderMonthlyOut();
+  if (window.renderWebStats) renderWebStats();
 }
 
 // ① สินค้าแต่ละประเภท: จำนวนรุ่น + ชิ้นคงเหลือ (รวมพลอย)
@@ -1386,5 +1386,6 @@ function showToast(msg, type='') {
 </script>
 <script src="js/report.js"></script>
   <script src="js/sales-report.js"></script>
+  <script src="js/web-stats.js"></script>
 </body>
 </html>

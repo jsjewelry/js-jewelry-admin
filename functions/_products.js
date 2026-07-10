@@ -199,7 +199,7 @@ h1{font-size:24px;font-weight:700;line-height:1.3;margin-bottom:4px}
 </div>
 </main>
 <footer class="footer">© <span>JS Jewelry</span> — เครื่องประดับเงินแท้ 925 &amp; พลอยแท้ · <a href="/catalog" style="color:rgba(255,255,255,.6)">แคตตาล็อกสินค้า</a></footer>
-</body>
+<script src="/js/track.js" defer></script></body>
 </html>`;
 }
 

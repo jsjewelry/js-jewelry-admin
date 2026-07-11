@@ -124,6 +124,7 @@ input.sku-badge.sku-error{border-color:var(--red);color:var(--red)}
             <option>กำไล</option><option>สร้อยข้อมือ</option><option>สร้อยคอ</option>
           </select>
         </div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;user-select:none"><input type="checkbox" id="p-isnew" style="width:auto;accent-color:#1a7f4e"> 🆕 NEW ARRIVAL</label>
         <div style="margin-left:auto" id="status-display"></div>
       </div>
 
@@ -291,6 +292,7 @@ async function loadEditProduct() {
     previewUrl(editProduct.image3, 2);
   }
   document.getElementById('p-video').value = editProduct.videoUrl || '';
+  document.getElementById('p-isnew').checked = !!editProduct.isNew;
   updateStatusPreview();
   checkPromo();
 }
@@ -507,6 +509,12 @@ async function saveProduct() {
     } else {
       await sheetsAddProduct(product);
       showToast(`✅ เพิ่ม ${sku} เรียบร้อยค่ะ`);
+    }
+
+    // NEW ARRIVAL: เขียนเฉพาะช่อง X (แยกจากแถวหลัก A:V)
+    const isNewChecked = document.getElementById('p-isnew').checked;
+    if (isNewChecked || (editProduct && editProduct.isNew)) {
+      await sheetsSetNewFlag(sku, isNewChecked);
     }
 
     setTimeout(() => location.href = 'index.html', 1200);

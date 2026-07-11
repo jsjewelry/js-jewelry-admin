@@ -99,6 +99,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .pill .pill-count { opacity: 0.55; font-weight: 500; margin-left: 3px; } /* ✏️ เพิ่มใหม่: จำนวนสินค้าต่อหมวด */
 
 .sort-wrap { display: flex; gap: 6px; }
+.price-select {
+  padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--border); color: var(--text-2); background: var(--surface);
+  font-family: inherit; cursor: pointer; outline: none; transition: all var(--ease);
+}
+.price-select:hover, .price-select:focus { border-color: var(--gold-d); color: var(--gold-d); }
+.price-select.active { background: var(--gold-bg); border-color: var(--gold); color: var(--gold-d); }
 .sort-btn {
   padding: 6px 13px; border-radius: 8px; font-size: 12px; font-weight: 600;
   border: 1px solid var(--border); color: var(--text-2);
@@ -439,6 +446,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   <div class="filter-inner">
     <div class="pills" id="js-pills"></div>
     <div class="sort-wrap">
+      <select class="price-select" id="js-price-range" onchange="setPriceRange(this.value)" aria-label="ช่วงราคา">
+        <option value="all">💰 ทุกช่วงราคา</option>
+        <option value="0-2000">ไม่เกิน ฿2,000</option>
+        <option value="2000-3000">฿2,000–3,000</option>
+        <option value="3000-5000">฿3,000–5,000</option>
+        <option value="5000-">฿5,000 ขึ้นไป</option>
+      </select>
       <button class="sort-btn" id="sort-asc"  onclick="setSort('asc')">ราคา ↑</button>
       <button class="sort-btn" id="sort-desc" onclick="setSort('desc')">ราคา ↓</button>
     </div>
@@ -645,6 +659,7 @@ function getImages(p) {
    🗂️  STATE
 ══════════════════════════════════════════════ */
 let all = [], activeCat = 'all', query = '', sortBy = 'default';
+let priceRange = 'all'; // 💰 ตัวกรองช่วงราคา
 let currentSku = null; // ✏️ เพิ่มใหม่: จำ SKU ที่เปิดอยู่ (ใช้ตอนแชร์)
 
 // สุ่มลำดับสินค้า (Fisher–Yates) — เปิดหน้ามาแล้วสุ่มใหม่ทุกครั้ง
@@ -659,6 +674,13 @@ function shuffle(a) {
 function getFiltered() {
   let list = [...all];
   if (activeCat !== 'all') list = list.filter(p => p.category === activeCat);
+  if (priceRange !== 'all') {
+    const [lo, hi] = priceRange.split('-');
+    list = list.filter(p => {
+      const e = effPrice(p);
+      return e >= Number(lo) && (hi ? e < Number(hi) : true);
+    });
+  }
   if (query) {
     const q = query.toLowerCase();
     list = list.filter(p =>
@@ -761,6 +783,12 @@ function setSort(s) {
   sortBy = sortBy === s ? 'default' : s;
   document.getElementById('sort-asc').classList.toggle('active', sortBy === 'asc');
   document.getElementById('sort-desc').classList.toggle('active', sortBy === 'desc');
+  render();
+}
+
+function setPriceRange(v) {
+  priceRange = v;
+  document.getElementById('js-price-range').classList.toggle('active', v !== 'all');
   render();
 }
 

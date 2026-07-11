@@ -12,7 +12,7 @@
 //  F:sellPrice  G:costPrice  H:profit
 // ============================================================
 
-const PRODUCTS_RANGE = `${CONFIG.PRODUCTS_SHEET}!A:V`;
+const PRODUCTS_RANGE = `${CONFIG.PRODUCTS_SHEET}!A:X`; // อ่านถึง X (X=isNew) — การเขียนทั้งแถวยังจำกัด A:V
 const SALES_RANGE    = `${CONFIG.SALES_SHEET}!A:H`;
 const GEMS_RANGE     = `${CONFIG.GEMS_SHEET}!A:P`;
 
@@ -51,7 +51,8 @@ function rowToProduct(r) {
     videoUrl:   r[18] || '',
     promoPrice: Number(r[19] || 0),
     image2:     r[20] || '',
-    image3:     r[21] || ''
+    image3:     r[21] || '',
+    isNew:      (r[23] || '').trim().toUpperCase() === 'Y'
   };
 }
 
@@ -151,6 +152,36 @@ async function ensureProductsHeader() {
           'imageUrl2','imageUrl3'
         ]]
       }
+    });
+  }
+}
+
+// ─── NEW ARRIVAL (คอลัมน์ X = isNew) ───────────────────────
+// เขียนเฉพาะช่อง X — ห้ามรวมใน productToRow/A:V (จะทับ W consignment เก่า)
+async function sheetsSetNewFlag(sku, isNew) {
+  const rowNum = await findProductRow(sku);
+  if (!rowNum) throw new Error(`ไม่พบ SKU: ${sku}`);
+  await ensureIsNewHeader();
+  await gapi.client.sheets.spreadsheets.values.update({
+    spreadsheetId: CONFIG.SHEET_ID,
+    range: `${CONFIG.PRODUCTS_SHEET}!X${rowNum}`,
+    valueInputOption: 'RAW',
+    resource: { values: [[isNew ? 'Y' : '']] }
+  });
+}
+
+async function ensureIsNewHeader() {
+  const resp = await gapi.client.sheets.spreadsheets.values.get({
+    spreadsheetId: CONFIG.SHEET_ID,
+    range: `${CONFIG.PRODUCTS_SHEET}!X1`
+  });
+  const v = resp.result.values;
+  if (!v || !v[0] || !v[0][0]) {
+    await gapi.client.sheets.spreadsheets.values.update({
+      spreadsheetId: CONFIG.SHEET_ID,
+      range: `${CONFIG.PRODUCTS_SHEET}!X1`,
+      valueInputOption: 'RAW',
+      resource: { values: [['isNew']] }
     });
   }
 }

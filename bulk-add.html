@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JS Jewelry — เพิ่มสินค้าหลายชิ้น (Bulk Add)</title>
+<meta name="robots" content="noindex,nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#C9A84C;--gold-l:#E8C97A;--gold-d:#8A6D2F;--gold-bg:#FBF7EE;--bg:#FAFAFA;--surface:#FFF;--border:rgba(0,0,0,.08);--t1:#1A1A1A;--t2:#6B6B6B;--t3:#ABABAB;--red:#C0271E;--green:#2d7a50;--radius:14px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--t1);min-height:100vh}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,select{font-family:inherit;font-size:14px}
+.nav{position:sticky;top:0;z-index:100;background:linear-gradient(135deg,#2B1A0E,#3E2A1A 55%,#4A3220);border-bottom:1px solid rgba(201,168,76,.35);height:60px;padding:0 22px;display:flex;align-items:center;gap:14px}
+.nav-brand{color:var(--gold);font-weight:700;font-size:16px;letter-spacing:1.5px;white-space:nowrap}
+.nav-sub{font-size:10px;color:rgba(255,255,255,.4);font-weight:400;display:block}
+.nav a.nav-link{color:rgba(255,255,255,.65);font-size:13px;text-decoration:none;padding:6px 12px;border:1px solid rgba(255,255,255,.15);border-radius:8px}
+.nav a.nav-link:hover{color:var(--gold-l);border-color:rgba(201,168,76,.5)}
+.nav .spacer{flex:1}
+.btn{padding:9px 18px;border-radius:9px;font-size:13px;font-weight:700;transition:opacity .2s;letter-spacing:.3px}
+.btn:hover{opacity:.88}
+.btn-gold{background:var(--gold);color:#111}
+.btn-dark{background:#333;color:#fff}
+.btn-green{background:var(--green);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:18px;text-align:center;padding:20px}
+#login-screen h1{font-size:22px;color:var(--gold-d)}
+#login-screen p{color:var(--t2);font-size:14px}
+.wrap{max-width:1250px;margin:0 auto;padding:22px 22px 80px}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.panel h2{font-size:16px;font-weight:700;color:var(--gold-d);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+h3.tabhead{font-size:14px;color:var(--gold-d);margin:16px 0 8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--gold-bg);color:var(--gold-d);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:8px 9px;text-align:left;border-bottom:1px solid rgba(201,168,76,.3);white-space:nowrap}
+td{padding:7px 9px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:var(--gold-bg)}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:5px}
+.tag-ok{background:rgba(92,186,125,.13);color:var(--green)}
+.tag-warn{background:rgba(230,160,30,.15);color:#9a6b00}
+.tag-err{background:rgba(192,39,30,.1);color:var(--red)}
+.muted{color:var(--t3);font-size:13px}
+.hint{background:var(--gold-bg);border:1px solid rgba(201,168,76,.3);border-radius:9px;padding:10px 14px;font-size:13px;color:#5a4a25;line-height:1.7;margin-top:12px}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:11px 22px;border-radius:10px;font-size:13px;z-index:999;display:none;max-width:90vw}
+#toast.err{background:var(--red)}
+#toast.ok{background:var(--green)}
+.tbl-wrap{overflow-x:auto}
+.summary-chip{background:var(--gold-bg);border:1px solid rgba(201,168,76,.3);border-radius:9px;padding:8px 14px;font-size:13px;color:var(--gold-d);font-weight:600}
+.drop{border:2px dashed rgba(201,168,76,.55);border-radius:12px;padding:28px 16px;text-align:center;color:var(--t2);font-size:14px;cursor:pointer;transition:background .15s}
+.drop.over{background:var(--gold-bg)}
+.new-v{color:var(--green);font-weight:700}
+@media(max-width:600px){.nav{padding:0 12px;gap:8px}.wrap{padding:14px 12px 60px}.panel{padding:14px}}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <h1>📥 JS Jewelry — เพิ่มสินค้าหลายชิ้น</h1>
+  <p>เข้าสู่ระบบด้วย Google Account เพื่อเพิ่มสินค้า/พลอยใหม่แบบชุด (Excel)</p>
+  <button class="btn btn-gold" onclick="signIn()">เข้าสู่ระบบด้วย Google</button>
+</div>
+
+<div id="app-screen" style="display:none">
+<header class="nav">
+  <span class="nav-brand">💎 JS Jewelry<span class="nav-sub">เพิ่มหลายชิ้น · BULK ADD</span></span>
+  <span class="spacer"></span>
+  <a class="nav-link" href="index.html">🏠 Admin</a>
+  <button class="btn btn-dark" onclick="signOut()">ออกจากระบบ</button>
+</header>
+<main class="wrap">
+
+  <div class="panel">
+    <h2>① ดาวน์โหลดเทมเพลต Excel</h2>
+    <p class="muted" style="margin-bottom:12px">ไฟล์มี 2 แท็บ: <b>Products</b> (สินค้า) และ <b>Gems</b> (พลอย) — กรอกเฉพาะแท็บที่ต้องการก็ได้ · แถวแรกใต้หัวตารางเป็นคำใบ้ (ไม่ต้องลบ ระบบข้ามให้)</p>
+    <button class="btn btn-gold" id="btn-template" onclick="downloadTemplate()">⬇ ดาวน์โหลดเทมเพลต</button>
+  </div>
+
+  <div class="panel">
+    <h2>② อัพโหลดไฟล์ที่กรอกแล้ว</h2>
+    <div class="drop" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      📂 ลากไฟล์ Excel (.xlsx) มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์
+    </div>
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none">
+    <div class="hint">
+      📌 <b>กติกา:</b> <b>sku ห้ามซ้ำ</b> ทั้งกับของเดิมในชีตและกันเองในไฟล์ · ช่องบังคับ Products: <b>sku, category, sellPrice, stock</b> · Gems: <b>sku, gemType, weight, pricePerCt, stock</b> · สถานะเว้นว่าง = พร้อมขาย · แถวที่ sku ว่างจะถูกข้าม<br>
+      ⚠️ สินค้าที่เพิ่มจะ<b>ยังไม่มีรูป</b> และขึ้นหน้า catalog ทันทีถ้าสถานะพร้อมขาย — เพิ่มเสร็จให้ไปที่ <b>"📁 อัปรูปหลายตัว"</b> ต่อเลย · พลอยควรใช้รหัสขึ้นต้น <b>PL-</b> (คำสั่งขายใน LINE แยกแท็บจากตัวนี้)
+    </div>
+  </div>
+
+  <div class="panel" id="preview-panel" style="display:none">
+    <h2>③ ตรวจสอบก่อนบันทึก</h2>
+    <div id="preview-area"></div>
+  </div>
+
+</main>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+/* ═══ CONFIG ═══ */
+const CONFIG = {
+  CLIENT_ID: '725893335045-4mhpfppohrm2tg7guaq3c1q7no3dlaki.apps.googleusercontent.com',
+  SHEET_ID:  '1Tk53rhDhYRxTkGpXvbd55hMYlTJ83stwG0H3yoZrMDo',
+  SCOPES:    'https://www.googleapis.com/auth/spreadsheets'
+};
+const KNOWN_STATUS = ['พร้อมขาย','หมดสต็อก','หยุดขาย'];
+const KNOWN_CATS = ['แหวน','ต่างหู','จี้','สร้อยข้อมือ','สร้อยคอ','กำไล'];
+
+/* นิยามแท็บ: คอลัมน์เทมเพลต + วิธีสร้างแถวจริง
+   Products เขียน A:T เท่านั้น (ไม่แตะ U,V,W,X) · Gems เขียน A:P */
+const TABS = {
+  Products: {
+    sheet:'Products', writeRange:'Products!A:T', label:'สินค้า (Products)',
+    cols: [
+      {key:'sku',            req:1, type:'text', w:14, hint:'เช่น SR0100 (ห้ามซ้ำ)'},
+      {key:'category',       req:1, type:'text', w:12, hint:'แหวน/ต่างหู/จี้/สร้อยข้อมือ/สร้อยคอ/กำไล'},
+      {key:'material',       req:0, type:'text', w:12, hint:'ว่าง = เงินแท้ 925'},
+      {key:'weight',         req:0, type:'num',  w:8,  hint:'กรัม เช่น 3.5'},
+      {key:'gemType',        req:0, type:'text', w:12, hint:'เช่น ไพลิน'},
+      {key:'gemWeight',      req:0, type:'num',  w:10, hint:'กะรัต เช่น 1.25'},
+      {key:'costPrice',      req:0, type:'num',  w:10, hint:'บาท'},
+      {key:'sellPrice',      req:1, type:'num',  w:10, hint:'บาท'},
+      {key:'stock',          req:1, type:'int',  w:7,  hint:'จำนวนชิ้น'},
+      {key:'status',         req:0, type:'text', w:10, hint:'ว่าง = พร้อมขาย'},
+      {key:'size',           req:0, type:'text', w:8,  hint:'เช่น 55'},
+      {key:'promotionPrice', req:0, type:'num',  w:12, hint:'ว่าง = ไม่มีโปรฯ'},
+      {key:'notes',          req:0, type:'text', w:20, hint:''}
+    ],
+    check(o, errs, warns){
+      if(o.category && KNOWN_CATS.indexOf(o.category)<0) warns.push('หมวด "'+o.category+'" ไม่อยู่ในชุดมาตรฐาน');
+      if(/^pl-/i.test(o.sku)) errs.push('รหัสขึ้นต้น PL- สงวนไว้สำหรับพลอย (แท็บ Gems)');
+      if(o.promotionPrice!=='' && o.sellPrice!=='' && Number(o.promotionPrice)>=Number(o.sellPrice)) warns.push('ราคาโปรฯ ≥ ราคาขาย');
+    },
+    displayName(o){
+      const mat = o.material || 'เงินแท้ 925';
+      const m = /เงิน/.test(mat) ? 'เงิน' : '';
+      return o.category + m + (o.gemType||'');
+    },
+    buildRow(o){
+      return [ genId(), o.sku, this.displayName(o), o.category, o.material||'เงินแท้ 925',
+        o.weight, o.gemType, o.gemWeight, o.costPrice, o.sellPrice, o.stock,
+        o.status||'พร้อมขาย', '', o.notes||'', thaiDate(), o.size||'', '', '', '', o.promotionPrice ];
+    },
+    sum(o){ return 'ขาย ฿'+o.sellPrice+(o.promotionPrice!==''?' · โปรฯ ฿'+o.promotionPrice:'')+' · สต็อก '+o.stock; }
+  },
+  Gems: {
+    sheet:'Gems', writeRange:'Gems!A:P', label:'พลอย (Gems)',
+    cols: [
+      {key:'sku',            req:1, type:'text', w:12, hint:'ขึ้นต้น PL- เช่น PL-050'},
+      {key:'gemType',        req:1, type:'text', w:18, hint:'เช่น Ruby (ทับทิม)'},
+      {key:'weight',         req:1, type:'num',  w:8,  hint:'กะรัต'},
+      {key:'shape',          req:0, type:'text', w:14, hint:'เช่น Oval-ไข่'},
+      {key:'size',           req:0, type:'text', w:12, hint:'เช่น 7x5x3.2'},
+      {key:'pricePerCt',     req:1, type:'num',  w:10, hint:'บาท/กะรัต'},
+      {key:'stock',          req:1, type:'int',  w:7,  hint:'จำนวน'},
+      {key:'status',         req:0, type:'text', w:10, hint:'ว่าง = พร้อมขาย'},
+      {key:'origin',         req:0, type:'text', w:10, hint:'เช่น จันทบุรี'},
+      {key:'unit',           req:0, type:'int',  w:8,  hint:'เม็ด/ชุด ว่าง = 1'},
+      {key:'notes',          req:0, type:'text', w:16, hint:''},
+      {key:'promotionPrice', req:0, type:'num',  w:12, hint:'ราคารวมโปรฯ ว่าง = ไม่มี'}
+    ],
+    check(o, errs, warns){
+      if(o.sku && !/^pl-/i.test(o.sku)) warns.push('รหัสไม่ขึ้นต้น PL- — คำสั่ง "ขาย" ใน LINE จะตัดสต็อกผิดแท็บ');
+    },
+    displayName(o){ return o.gemType + (o.weight!==''?' '+o.weight+' กะรัต':''); },
+    buildRow(o){
+      return [ genId(), o.sku, o.gemType, o.weight, o.shape||'', o.size||'',
+        o.pricePerCt, o.stock, o.status||'พร้อมขาย', o.notes||'-', thaiDate(),
+        '', o.origin||'', o.unit===''?'1':o.unit, '', o.promotionPrice ];
+    },
+    sum(o){ return '฿'+o.pricePerCt+'/กะรัต × '+o.weight+' ct · สต็อก '+o.stock; }
+  }
+};
+
+/* ═══ AUTH (pattern เดียวกับ bulk-edit.html) ═══ */
+let tokenClient=null, accessToken=null, gapiReady=false, gisReady=false;
+function gapiLoaded(){ gapi.load('client', async ()=>{ await gapi.client.init({}); await gapi.client.load('https://sheets.googleapis.com/$discovery/rest?version=v4'); gapiReady=true; maybeRender(); }); }
+function gisLoaded(){ tokenClient = google.accounts.oauth2.initTokenClient({ client_id:CONFIG.CLIENT_ID, scope:CONFIG.SCOPES, callback:handleToken }); gisReady=true; maybeRender(); }
+function maybeRender(){
+  if(!(gapiReady&&gisReady)) return;
+  const saved = sessionStorage.getItem('gapi_token');
+  if(saved){ try{ const t=JSON.parse(saved); if(t.expires_at>Date.now()){ accessToken=t.access_token; gapi.client.setToken({access_token:accessToken}); showApp(); return; } }catch(e){} }
+  showLogin();
+}
+function handleToken(resp){
+  if(resp.error){ toast('เข้าสู่ระบบไม่สำเร็จ: '+resp.error,'err'); return; }
+  accessToken=resp.access_token;
+  gapi.client.setToken({access_token:accessToken});
+  sessionStorage.setItem('gapi_token', JSON.stringify({access_token:accessToken, expires_at:Date.now()+(resp.expires_in-60)*1000}));
+  showApp();
+}
+function signIn(){ if(tokenClient) tokenClient.requestAccessToken({prompt:''}); }
+function signOut(){ if(accessToken){ google.accounts.oauth2.revoke(accessToken); accessToken=null; } gapi.client.setToken(null); sessionStorage.removeItem('gapi_token'); showLogin(); }
+function showApp(){ document.getElementById('login-screen').style.display='none'; document.getElementById('app-screen').style.display='block'; loadSkus().catch(e=>{ console.error(e); toast('โหลดรายการ SKU ไม่สำเร็จ: '+errMsg(e),'err'); }); }
+function showLogin(){ document.getElementById('login-screen').style.display='flex'; document.getElementById('app-screen').style.display='none'; }
+
+/* ═══ HELPERS ═══ */
+function toast(msg,type){ const el=document.getElementById('toast'); el.textContent=msg; el.className=type||''; el.style.display='block'; clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none', 6000); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function errMsg(e){ return e && (e.result && e.result.error && e.result.error.message || e.message) || String(e); }
+function genId(){ let s=''; while(s.length<18) s+=Math.random().toString(36).slice(2); return s.slice(0,18); }
+function thaiDate(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+(d.getFullYear()+543); }
+function normHeader(h){ return String(h||'').trim().toLowerCase().replace(/[\s_()-]/g,''); }
+function parseNum(raw){ const s=String(raw).replace(/[฿,\s]/g,''); if(s==='') return {ok:true,val:''}; const n=Number(s); return isNaN(n)||n<0 ? {ok:false} : {ok:true,val:n}; }
+
+/* ═══ SKU เดิมในชีต ═══ */
+let existingSkus = null;
+async function loadSkus(){
+  const resp = await gapi.client.sheets.spreadsheets.values.batchGet({ spreadsheetId:CONFIG.SHEET_ID, ranges:['Products!B:B','Gems!B:B'] });
+  existingSkus = {};
+  (resp.result.valueRanges||[]).forEach((vr,i)=>{
+    (vr.values||[]).slice(1).forEach(r=>{ const s=String(r[0]||'').trim().toLowerCase(); if(s) existingSkus[s] = i===0?'Products':'Gems'; });
+  });
+  toast('พร้อมใช้งาน — SKU เดิมในระบบ '+Object.keys(existingSkus).length+' รายการ','ok');
+}
+
+/* ═══ ① เทมเพลต ═══ */
+function downloadTemplate(){
+  const wb = XLSX.utils.book_new();
+  Object.keys(TABS).forEach(name=>{
+    const t = TABS[name];
+    const header = t.cols.map(c=>c.key);
+    const hintRow = t.cols.map(c=>c.key==='sku'?'':(c.hint?'('+c.hint+')':''));
+    const ws = XLSX.utils.aoa_to_sheet([header, hintRow]);
+    ws['!cols'] = t.cols.map(c=>({wch:c.w||12}));
+    XLSX.utils.book_append_sheet(wb, ws, name);
+  });
+  XLSX.writeFile(wb, 'bulk_add_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('✅ ดาวน์โหลดเทมเพลตแล้ว — กรอกเสร็จลากกลับมาวางข้อ ②','ok');
+}
+
+/* ═══ ② อ่านไฟล์ ═══ */
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', ()=>dz.classList.remove('over'));
+dz.addEventListener('drop', e=>{ e.preventDefault(); dz.classList.remove('over'); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+document.getElementById('file-input').addEventListener('change', e=>{ if(e.target.files[0]) handleFile(e.target.files[0]); e.target.value=''; });
+
+async function handleFile(file){
+  try{
+    toast('กำลังอ่านไฟล์ '+file.name+' …');
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, {type:'array'});
+    toast('โหลด SKU ล่าสุดจากชีตเพื่อกันรหัสซ้ำ…');
+    await loadSkus();                       // เช็กกับชีตสดเสมอ
+    const res = parseWorkbook(wb);
+    renderPreview(res);
+  }catch(e){ console.error(e); toast('อ่านไฟล์ไม่สำเร็จ: '+errMsg(e),'err'); }
+}
+
+function sheetToTab(name){
+  const n = normHeader(name);
+  if(n.indexOf('gem')>=0 || n.indexOf('พลอย')>=0) return 'Gems';
+  if(n.indexOf('product')>=0 || n.indexOf('สินค้า')>=0) return 'Products';
+  return null;
+}
+
+/* แปลง workbook → รายการที่จะเพิ่ม (pure logic — มี test แยก) */
+function parseWorkbook(wb){
+  const out = { items:[], errors:[], ignoredSheets:[] };
+  const seen = {};   // กันซ้ำกันเองข้ามแท็บด้วย
+  wb.SheetNames.forEach(sn=>{
+    const tabName = sheetToTab(sn);
+    if(!tabName){ out.ignoredSheets.push(sn); return; }
+    const t = TABS[tabName];
+    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, raw:false, defval:''});
+    const hIdx = aoa.findIndex(r=>r.some(c=>normHeader(c)==='sku'));
+    if(hIdx<0) return;
+    const header = aoa[hIdx].map(normHeader);
+    const colIdx = {};
+    t.cols.forEach(c=>{ const i=header.indexOf(normHeader(c.key)); if(i>=0) colIdx[c.key]=i; });
+    for(let r=hIdx+1; r<aoa.length; r++){
+      const row = aoa[r];
+      const o = {};
+      t.cols.forEach(c=>{ o[c.key] = (c.key in colIdx) ? String(row[colIdx[c.key]]==null?'':row[colIdx[c.key]]).trim() : ''; });
+      if(!o.sku) continue;                                   // แถวว่าง/แถวคำใบ้ → ข้าม
+      const errs=[], warns=[];
+      const low = o.sku.toLowerCase();
+      if(existingSkus[low]) errs.push('SKU ซ้ำกับของเดิมในชีต ('+existingSkus[low]+')');
+      if(seen[low]) errs.push('SKU ซ้ำกันเองในไฟล์');
+      seen[low]=1;
+      t.cols.forEach(c=>{
+        if(c.req && o[c.key]==='') errs.push('ขาดช่องบังคับ: '+c.key);
+        if((c.type==='num'||c.type==='int') && o[c.key]!==''){
+          const pn = parseNum(o[c.key]);
+          if(!pn.ok) errs.push(c.key+': "'+o[c.key]+'" ไม่ใช่ตัวเลข');
+          else o[c.key] = c.type==='int' ? Math.round(pn.val) : pn.val;
+        }
+      });
+      if(o.status!=='' && KNOWN_STATUS.indexOf(o.status)<0) warns.push('สถานะ "'+o.status+'" ไม่อยู่ในชุดมาตรฐาน');
+      t.check(o, errs, warns);
+      if(errs.length) out.errors.push({tab:tabName, sku:o.sku, msgs:errs});
+      else out.items.push({tab:tabName, o, warns, name:t.displayName(o)});
+    }
+  });
+  return out;
+}
+
+/* ═══ ③ preview + บันทึก ═══ */
+let pendingItems = [];
+function renderPreview(res){
+  pendingItems = res.items;
+  document.getElementById('preview-panel').style.display='block';
+  const area = document.getElementById('preview-area');
+  let html = '';
+  if(res.errors.length){
+    html += '<h3 class="tabhead">❌ แถวที่บันทึกไม่ได้ (ถูกข้ามทั้งแถว)</h3><div class="tbl-wrap"><table><tr><th>แท็บ</th><th>SKU</th><th>ปัญหา</th></tr>'
+      + res.errors.map(e=>'<tr><td>'+esc(e.tab)+'</td><td><b>'+esc(e.sku)+'</b></td><td>'+e.msgs.map(m=>'<span class="tag tag-err">'+esc(m)+'</span>').join(' ')+'</td></tr>').join('')
+      + '</table></div>';
+  }
+  ['Products','Gems'].forEach(tab=>{
+    const items = res.items.filter(it=>it.tab===tab);
+    if(!items.length) return;
+    html += '<h3 class="tabhead">➕ '+esc(TABS[tab].label)+' — จะเพิ่ม '+items.length+' รายการ</h3><div class="tbl-wrap"><table>'
+      + '<tr><th>SKU</th><th>ชื่อที่จะบันทึก</th><th>สรุป</th><th>หมายเหตุ</th></tr>'
+      + items.map(it=>'<tr><td><b>'+esc(it.o.sku)+'</b></td><td class="new-v">'+esc(it.name)+'</td><td>'+esc(TABS[tab].sum(it.o))+'</td><td>'
+        + it.warns.map(w=>'<span class="tag tag-warn">⚠️ '+esc(w)+'</span>').join(' ')+'</td></tr>').join('')
+      + '</table></div>';
+  });
+  if(!res.items.length && !res.errors.length) html += '<p class="muted">— ไม่พบแถวข้อมูลในไฟล์ —</p>';
+  const nP = res.items.filter(i=>i.tab==='Products').length, nG = res.items.filter(i=>i.tab==='Gems').length;
+  html += '<div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">'
+    + '<span class="summary-chip">จะเพิ่ม: สินค้า '+nP+' · พลอย '+nG+' · ข้าม '+res.errors.length+' แถว</span>'
+    + '<button class="btn btn-green" onclick="confirmSave()" '+(res.items.length?'':'disabled')+'>✔ ยืนยันเพิ่มลงชีต</button></div>'
+    + (res.ignoredSheets.length?'<p class="muted" style="margin-top:8px">แท็บที่ไม่รู้จักและไม่อ่าน: '+esc(res.ignoredSheets.join(', '))+'</p>':'')
+    + '<p class="muted" style="margin-top:4px">ระบบจะ append ต่อท้ายชีต — id/ชื่อ/วันที่ ระบบใส่ให้อัตโนมัติ · ไม่แตะแถวเดิม/คอลัมน์ consignment/isNew</p>';
+  area.innerHTML = html;
+  area.scrollIntoView({behavior:'smooth'});
+}
+
+async function confirmSave(){
+  if(!pendingItems.length) return;
+  const btns = document.querySelectorAll('#preview-area .btn'); btns.forEach(b=>b.disabled=true);
+  try{
+    let total = 0;
+    for(const tab of ['Products','Gems']){
+      const items = pendingItems.filter(it=>it.tab===tab);
+      if(!items.length) continue;
+      toast('กำลังเพิ่ม '+TABS[tab].label+' '+items.length+' แถว…');
+      const values = items.map(it=>TABS[tab].buildRow(it.o));
+      await gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId:CONFIG.SHEET_ID, range:TABS[tab].writeRange,
+        valueInputOption:'USER_ENTERED', insertDataOption:'INSERT_ROWS',
+        resource:{ values } });
+      total += items.length;
+    }
+    // ตรวจซ้ำ: โหลด SKU ใหม่ ทุกตัวที่เพิ่มต้องอยู่ในชีตแล้ว
+    await loadSkus();
+    const missing = pendingItems.filter(it=>!existingSkus[it.o.sku.toLowerCase()]);
+    if(!missing.length){
+      document.getElementById('preview-area').innerHTML =
+        '<p class="summary-chip" style="display:inline-block">✅ เพิ่มเรียบร้อย '+total+' รายการ — ตรวจซ้ำแล้วทุก SKU อยู่ในชีต</p>'
+        + '<p class="hint" style="margin-top:12px">ขั้นต่อไป: ไปที่ <a href="bulk-upload.html"><b>📁 อัปรูปหลายตัว</b></a> เพื่อใส่รูปสินค้า — ระหว่างยังไม่มีรูป สินค้าจะโชว์บน catalog แบบไม่มีรูป</p>';
+      toast('✅ เพิ่ม '+total+' รายการสำเร็จ','ok');
+      pendingItems=[];
+    } else {
+      toast('เพิ่มแล้วแต่ตรวจไม่พบ '+missing.length+' SKU — เปิดชีตเช็กด่วน อย่าอัพไฟล์ซ้ำ','err');
+    }
+  }catch(e){ console.error(e); toast('บันทึกไม่สำเร็จ: '+errMsg(e),'err'); btns.forEach(b=>b.disabled=false); }
+}
+</script>
+<script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+<script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+</body>
+</html>

@@ -404,6 +404,20 @@ async function generateSku(category) {
   };
   const prefix = prefixMap[category] || 'SX';
   const products = await sheetsGetAllProducts();
+
+  // Phase 1: calculate the next code only for rings (SR3571 -> SR3572).
+  // Accept both the current SR3571 format and the legacy SR-001 format.
+  if (category === '\u0e41\u0e2b\u0e27\u0e19') {
+    const ringNumbers = products
+      .map(p => String(p.sku || '').trim().toUpperCase().match(/^SR-?(\d+)$/))
+      .filter(Boolean)
+      .map(match => Number(match[1]))
+      .filter(Number.isFinite);
+    const maxRingNumber = ringNumbers.length > 0 ? Math.max(...ringNumbers) : 0;
+    return `SR${String(maxRingNumber + 1).padStart(4, '0')}`;
+  }
+
+  // Other categories keep their existing behavior in this phase.
   const existing = products
     .map(p => p.sku)
     .filter(s => s.startsWith(prefix))

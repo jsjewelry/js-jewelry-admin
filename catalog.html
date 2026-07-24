@@ -385,6 +385,19 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   transition: background var(--ease);
 }
 .modal-video-chip:hover { background: rgba(0,0,0,0.85); }
+.modal-video-player {
+  position: relative; width: 100%; aspect-ratio: 16 / 9;
+  overflow: hidden; border-radius: 20px 20px 0 0; background: #000;
+}
+.modal-video-player[hidden], #js-modal-img-wrap[hidden] { display: none; }
+.modal-video-player iframe { display: block; width: 100%; height: 100%; border: 0; }
+.modal-video-back {
+  position: absolute; bottom: 12px; left: 12px; z-index: 10;
+  background: rgba(0,0,0,0.68); color: #fff;
+  padding: 8px 12px; border-radius: 999px;
+  font-size: 12px; font-weight: 700;
+}
+.modal-video-back:hover { background: rgba(0,0,0,0.88); }
 .trust-line { text-align: center; font-size: 12px; font-weight: 600; color: var(--gold-d); margin: -4px 0 14px; }
 
 /* ── Footer ── */
@@ -486,10 +499,11 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   <div class="modal-box">
     <div class="modal-img-wrap">
       <div id="js-modal-img-wrap"></div>
+      <div class="modal-video-player" id="js-modal-video-player" hidden></div>
       <button class="modal-close" id="js-modal-close">✕</button>
       <!-- ✏️ เพิ่มใหม่: ปุ่มแชร์ + ป้ายวิดีโอบนรูป -->
       <button class="modal-share" id="js-modal-share" title="แชร์สินค้าให้เพื่อน">↗ แชร์</button>
-      <a class="modal-video-chip" id="js-modal-video-chip" target="_blank" rel="noopener" style="display:none">▶ ดูวิดีโอ</a>
+      <button type="button" class="modal-video-chip" id="js-modal-video-chip" style="display:none">▶ เล่นวิดีโอ</button>
     </div>
     <div class="modal-body">
       <div class="modal-cat"  id="js-modal-cat"></div>
@@ -841,12 +855,46 @@ function carSwipeInit() {
   }, { passive: true });
 }
 
+function getYouTubeEmbedUrl(value) {
+  if (!value) return '';
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase().replace(/^www\./, '');
+    let videoId = '';
+    if (host === 'youtu.be') {
+      videoId = url.pathname.split('/').filter(Boolean)[0] || '';
+    } else if (['youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtube-nocookie.com'].includes(host)) {
+      if (url.pathname === '/watch') {
+        videoId = url.searchParams.get('v') || '';
+      } else {
+        const match = url.pathname.match(/^\/(?:embed|shorts|live)\/([^/?#]+)/);
+        videoId = match ? match[1] : '';
+      }
+    }
+    if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return '';
+    return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0`;
+  } catch (e) {
+    return '';
+  }
+}
+
+function stopModalVideo() {
+  const imageWrap = document.getElementById('js-modal-img-wrap');
+  const player = document.getElementById('js-modal-video-player');
+  const chip = document.getElementById('js-modal-video-chip');
+  player.innerHTML = '';
+  player.hidden = true;
+  imageWrap.hidden = false;
+  chip.style.display = chip.dataset.videoUrl ? 'flex' : 'none';
+}
+
 /* ══════════════════════════════════════════════
    🔲  MODAL
 ══════════════════════════════════════════════ */
 function openModal(sku) {
   const p = all.find(x => x.sku === sku);
   if (!p) return;
+  stopModalVideo();
   currentSku = sku; // ✏️ เพิ่มใหม่
   const emoji  = CAT_EMOJI[p.category] || '💎';
 
@@ -890,11 +938,13 @@ function openModal(sku) {
       <span class="modal-val">${v}</span>
     </div>`).join('');
 
-  // ✏️ แก้ไข: วิดีโอเป็นป้ายเล็กบนรูป แทนปุ่มแดงใหญ่ท้ายป็อปอัป (ให้ LINE เป็นปุ่มหลักเดียว)
+  // วิดีโอโหลดเมื่อกดเท่านั้น เพื่อให้ Catalog เปิดเร็วและเล่นได้ในป็อปอัปเดิม
   const vurl = (p.videoUrl || '').trim();
   const vchip = document.getElementById('js-modal-video-chip');
-  if (vurl) { vchip.href = vurl; vchip.style.display = 'flex'; }
-  else { vchip.style.display = 'none'; }
+  vchip.dataset.videoUrl = vurl;
+  vchip.dataset.embedUrl = getYouTubeEmbedUrl(vurl);
+  vchip.textContent = vchip.dataset.embedUrl ? '▶ เล่นวิดีโอ' : '↗ เปิดวิดีโอ';
+  vchip.style.display = vurl ? 'flex' : 'none';
   document.getElementById('js-modal-video').innerHTML = '';
 
   document.getElementById('js-modal').classList.add('open');
@@ -902,6 +952,7 @@ function openModal(sku) {
 }
 
 function closeModal() {
+  stopModalVideo();
   document.getElementById('js-modal').classList.remove('open');
   document.body.style.overflow = '';
 }
@@ -966,6 +1017,35 @@ document.getElementById('js-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('js-modal')) closeModal();
 });
 document.getElementById('js-modal-close').addEventListener('click', closeModal);
+document.getElementById('js-modal-video-chip').addEventListener('click', () => {
+  const chip = document.getElementById('js-modal-video-chip');
+  const embedUrl = chip.dataset.embedUrl || '';
+  const videoUrl = chip.dataset.videoUrl || '';
+  if (!embedUrl) {
+    if (videoUrl) window.open(videoUrl, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
+  const imageWrap = document.getElementById('js-modal-img-wrap');
+  const player = document.getElementById('js-modal-video-player');
+  const iframe = document.createElement('iframe');
+  iframe.src = embedUrl;
+  iframe.title = 'วิดีโอสินค้า JS Jewelry';
+  iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
+  iframe.allowFullscreen = true;
+  iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+
+  const back = document.createElement('button');
+  back.type = 'button';
+  back.className = 'modal-video-back';
+  back.textContent = '← กลับไปดูรูป';
+  back.addEventListener('click', stopModalVideo);
+
+  player.replaceChildren(iframe, back);
+  imageWrap.hidden = true;
+  player.hidden = false;
+  chip.style.display = 'none';
+});
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeModal();
   if (document.getElementById('js-modal').classList.contains('open')) {

@@ -68,6 +68,27 @@ export function getImgUrl(url){
   if(url.includes('drive.google.com/open?id=') && (m=url.match(/id=([a-zA-Z0-9_-]+)/))) return `https://lh3.googleusercontent.com/d/${m[1]}`;
   return url;
 }
+export function getYouTubeEmbedUrl(value){
+  if(!value) return '';
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase().replace(/^www\./, '');
+    let videoId = '';
+    if(host === 'youtu.be') {
+      videoId = url.pathname.split('/').filter(Boolean)[0] || '';
+    } else if(['youtube.com','m.youtube.com','music.youtube.com','youtube-nocookie.com'].includes(host)) {
+      if(url.pathname === '/watch') videoId = url.searchParams.get('v') || '';
+      else {
+        const match = url.pathname.match(/^\/(?:embed|shorts|live)\/([^/?#]+)/);
+        videoId = match ? match[1] : '';
+      }
+    }
+    if(!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return '';
+    return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0`;
+  } catch(e) {
+    return '';
+  }
+}
 export const hasPromo = p => p.promoPrice>0 && p.promoPrice<p.sellPrice;
 export const effPrice = p => hasPromo(p) ? p.promoPrice : p.sellPrice;
 export function fmtPrice(n){ return '฿'+Number(n||0).toLocaleString('en-US'); }
@@ -82,6 +103,7 @@ export function renderProductPage(p){
   const url = `${SITE}/p/${encodeURIComponent(p.sku)}`;
   const inStock = p.status==='พร้อมขาย';
   const vurl = (p.videoUrl||'').trim();
+  const embedUrl = getYouTubeEmbedUrl(vurl);
   const desc = (p.highlight && p.highlight.trim() && p.highlight.trim()!=='-') ? p.highlight.trim()
              : (p.notes && p.notes.trim()!=='-' ? p.notes.trim() : '');
   const metaDesc = (`${p.name}${p.material?(' '+p.material):''}${p.gemType?(' พลอย'+p.gemType):''} ราคา ${fmtPrice(price)} — JS Jewelry เครื่องประดับเงินแท้ 925 & พลอยแท้ พร้อมส่ง สั่งซื้อผ่าน LINE`+(desc?(' · '+desc):'')).replace(/\s+/g,' ').trim().slice(0,300);
@@ -115,8 +137,38 @@ export function renderProductPage(p){
   const priceHtml = promo ? `<span class="old">${fmtPrice(p.sellPrice)}</span><span class="price promo">${fmtPrice(price)}</span><span class="badge">-${off}%</span>` : `<span class="price">${fmtPrice(price)}</span>`;
   const rowsHtml = rows.map(([l,v])=>`<div class="row"><span class="l">${esc(l)}</span><span class="v">${esc(v)}</span></div>`).join('');
   const descHtml = desc ? `<div class="desc">${esc(desc)}</div>` : '';
-  const videoHtml = vurl ? `<a class="video-chip" href="${esc(vurl)}" target="_blank" rel="noopener">▶ ดูวิดีโอ</a>` : '';
+  const videoHtml = embedUrl
+    ? `<button type="button" class="video-chip" id="video-play" data-embed="${esc(embedUrl)}">▶ เล่นวิดีโอ</button>`
+    : (vurl ? `<a class="video-chip" href="${esc(vurl)}" target="_blank" rel="noopener">↗ เปิดวิดีโอ</a>` : '');
+  const videoPlayerHtml = embedUrl ? `<div class="video-wrap" id="video-wrap" hidden><div class="video-frame" id="video-frame"></div><button type="button" class="video-back" id="video-back">← กลับไปดูรูป</button></div>` : '';
   const sizeHtml = p.category==='แหวน' ? `<a class="size-btn" href="/article/ring-size">📏 ไม่รู้ไซส์? ดูวิธีวัดไซส์แหวน</a>` : '';
+  const videoScript = embedUrl ? `<script>
+(() => {
+  const play = document.getElementById('video-play');
+  const media = document.getElementById('product-media');
+  const player = document.getElementById('video-wrap');
+  const frame = document.getElementById('video-frame');
+  const back = document.getElementById('video-back');
+  if (!play || !media || !player || !frame || !back) return;
+  const stopVideo = () => {
+    frame.replaceChildren();
+    player.hidden = true;
+    media.hidden = false;
+  };
+  play.addEventListener('click', () => {
+    const iframe = document.createElement('iframe');
+    iframe.src = play.dataset.embed || '';
+    iframe.title = 'วิดีโอสินค้า JS Jewelry';
+    iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
+    iframe.allowFullscreen = true;
+    iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+    frame.replaceChildren(iframe);
+    media.hidden = true;
+    player.hidden = false;
+  });
+  back.addEventListener('click', stopVideo);
+})();
+</script>` : '';
 
   return `<!DOCTYPE html>
 <html lang="th">
@@ -167,7 +219,11 @@ h1{font-size:24px;font-weight:700;line-height:1.3;margin-bottom:4px}
 .line-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:10px;background:#06C755;color:#fff;font-weight:700;font-size:15px;margin-bottom:10px}
 .img-wrap{position:relative}
 .video-chip{position:absolute;bottom:12px;right:12px;z-index:5;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.65);color:#fff;font-size:12px;font-weight:700;padding:7px 12px;border-radius:999px;text-decoration:none;transition:background .22s ease}
+button.video-chip{border:0;font-family:inherit;cursor:pointer}
 .video-chip:hover{background:rgba(0,0,0,.85)}
+.video-wrap{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:16px;background:#000}
+.video-wrap[hidden],.img-wrap[hidden]{display:none}.video-frame{position:absolute;inset:0}.video-frame iframe{display:block;width:100%;height:100%;border:0}
+.video-back{position:absolute;bottom:12px;left:12px;z-index:2;border:0;border-radius:999px;padding:8px 12px;background:rgba(0,0,0,.68);color:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer}.video-back:hover{background:rgba(0,0,0,.88)}
 .size-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;border:1.5px solid rgba(201,168,76,.55);background:var(--gold-bg);color:var(--gold-d);font-weight:700;font-size:14px;margin-bottom:10px}
 .back{display:inline-block;font-size:13px;color:var(--gold-d);font-weight:600}
 .footer{background:linear-gradient(135deg,#2B1A0E,#3E2A1A);color:rgba(255,255,255,.4);text-align:center;padding:22px;font-size:12px;letter-spacing:.5px}.footer span{color:var(--gold)}
@@ -179,7 +235,8 @@ h1{font-size:24px;font-weight:700;line-height:1.3;margin-bottom:4px}
 <nav class="crumb"><a href="/catalog">หน้ารวมสินค้า</a> › ${esc(p.category)} › ${esc(p.name)}</nav>
 <div class="grid">
   <div>
-    <div class="img-wrap"><img class="main" src="${esc(mainImg)}" alt="${esc(p.name+' '+(p.material||'')+' JS Jewelry')}">${videoHtml}</div>
+    <div class="img-wrap" id="product-media"><img class="main" src="${esc(mainImg)}" alt="${esc(p.name+' '+(p.material||'')+' JS Jewelry')}">${videoHtml}</div>
+    ${videoPlayerHtml}
     ${thumbs}
   </div>
   <div>
@@ -199,7 +256,7 @@ h1{font-size:24px;font-weight:700;line-height:1.3;margin-bottom:4px}
 </div>
 </main>
 <footer class="footer">© <span>JS Jewelry</span> — เครื่องประดับเงินแท้ 925 &amp; พลอยแท้ · <a href="/catalog" style="color:rgba(255,255,255,.6)">แคตตาล็อกสินค้า</a></footer>
-<script src="/js/track.js" defer></script></body>
+<script src="/js/track.js" defer></script>${videoScript}</body>
 </html>`;
 }
 

@@ -82,7 +82,7 @@ tr:hover td{background:var(--gold-bg)}
     </div>
     <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none">
     <div class="hint">
-      📌 <b>กติกา:</b> <b>sku ห้ามซ้ำ</b> ทั้งกับของเดิมในชีตและกันเองในไฟล์ · ช่องบังคับ Products: <b>sku, category, sellPrice, stock</b> · Gems: <b>sku, gemType, weight, pricePerCt, stock</b> · สถานะเว้นว่าง = พร้อมขาย · แถวที่ sku ว่างจะถูกข้าม<br>
+      📌 <b>กติกา:</b> <b>sku ห้ามซ้ำ</b> ทั้งกับของเดิมในชีตและกันเองในไฟล์ · ช่องบังคับ Products: <b>sku, category, stock</b> · Gems: <b>sku, gemType, weight, pricePerCt, stock</b> · สถานะเว้นว่าง = พร้อมขาย · แถวที่ sku ว่างจะถูกข้าม<br>
       ⚠️ สินค้าที่เพิ่มจะ<b>ยังไม่มีรูป</b> และขึ้นหน้า catalog ทันทีถ้าสถานะพร้อมขาย — เพิ่มเสร็จให้ไปที่ <b>"📁 อัปรูปหลายตัว"</b> ต่อเลย · พลอยควรใช้รหัสขึ้นต้น <b>PL-</b> (คำสั่งขายใน LINE แยกแท็บจากตัวนี้)
     </div>
   </div>
@@ -121,7 +121,7 @@ const TABS = {
       {key:'gemType',        req:0, type:'text', w:12, hint:'เช่น ไพลิน'},
       {key:'gemWeight',      req:0, type:'num',  w:10, hint:'กะรัต เช่น 1.25'},
       {key:'costPrice',      req:0, type:'num',  w:10, hint:'บาท'},
-      {key:'sellPrice',      req:1, type:'num',  w:10, hint:'บาท'},
+      {key:'sellPrice',      req:0, type:'num',  w:10, hint:'บาท (เว้นว่างได้)'},
       {key:'stock',          req:1, type:'int',  w:7,  hint:'จำนวนชิ้น'},
       {key:'status',         req:0, type:'text', w:10, hint:'ว่าง = พร้อมขาย'},
       {key:'size',           req:0, type:'text', w:8,  hint:'เช่น 55'},

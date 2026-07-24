@@ -259,6 +259,12 @@ function onSkuInput(input) {
 
 let selectedFiles = [null, null, null]; // [รูปหลัก, รูปที่2, รูปที่3]
 
+let imagePreparePromises = [null, null, null];
+let imagePrepareErrors = [null, null, null];
+let imagePrepareTokens = [0, 0, 0];
+let previewObjectUrls = [null, null, null];
+let imagePrepareQueue = Promise.resolve(); // Serialize compression to limit mobile memory use.
+
 async function onAppReady() {
   document.getElementById('form-loading').style.display = 'none';
   document.getElementById('form-area').style.display = 'block';
@@ -346,16 +352,47 @@ function imgError(idx) {
   area.onclick = () => document.getElementById('img-input-' + idx).click();
 }
 
+function releasePreviewObjectUrl(idx) {
+  if (previewObjectUrls[idx]) {
+    URL.revokeObjectURL(previewObjectUrls[idx]);
+    previewObjectUrls[idx] = null;
+  }
+}
+
 function handleImgSelect(input, idx) {
   const f = input.files[0];
   if (!f) return;
-  selectedFiles[idx] = f;
-  const reader = new FileReader();
-  reader.onload = e => {
-    renderImg(idx, e.target.result, false);
-    document.getElementById('upload-status').textContent = '📎 รูปพร้อมอัปโหลดเมื่อกด บันทึก';
-  };
-  reader.readAsDataURL(f);
+  const token = ++imagePrepareTokens[idx];
+  selectedFiles[idx] = null;
+  imagePrepareErrors[idx] = null;
+  document.getElementById('upload-status').textContent = `⏳ กำลังเตรียมรูป ${idx + 1}…`;
+
+  const prepare = imagePrepareQueue
+    .catch(() => {})
+    .then(() => compressImage(f))
+    .then(compressed => {
+      if (token !== imagePrepareTokens[idx]) return;
+      selectedFiles[idx] = compressed;
+      releasePreviewObjectUrl(idx);
+      previewObjectUrls[idx] = URL.createObjectURL(compressed);
+      renderImg(idx, previewObjectUrls[idx], false);
+      document.getElementById('upload-status').textContent = '📎 รูปพร้อมอัปโหลดเมื่อกด บันทึก';
+    })
+    .catch(error => {
+      if (token !== imagePrepareTokens[idx]) return;
+      selectedFiles[idx] = null;
+      imagePrepareErrors[idx] = error;
+      releasePreviewObjectUrl(idx);
+      imgError(idx);
+      document.getElementById('upload-status').textContent = `⚠️ รูป ${idx + 1}: ${error.message}`;
+      showToast(`รูป ${idx + 1}: ${error.message}`, 'error');
+    })
+    .finally(() => {
+      if (token === imagePrepareTokens[idx]) imagePreparePromises[idx] = null;
+    });
+
+  imagePreparePromises[idx] = prepare;
+  imagePrepareQueue = prepare.catch(() => {});
 }
 
 // แปลงลิงก์ Google Drive (/file/d/ID/view, open?id=ID ฯลฯ) → ลิงก์รูปตรงที่โชว์ได้
@@ -375,7 +412,11 @@ function previewUrl(url, idx) {
 }
 
 function clearImg(idx) {
+  imagePrepareTokens[idx]++;
+  imagePreparePromises[idx] = null;
+  imagePrepareErrors[idx] = null;
   selectedFiles[idx] = null;
+  releasePreviewObjectUrl(idx);
   const u = document.getElementById('p-imgurl-' + idx);
   if (u) u.value = '';
   const area = document.getElementById('img-area-' + idx);
@@ -476,20 +517,53 @@ async function saveProduct() {
     // ชื่อสินค้า: ถ้าแก้ไขให้ใช้ชื่อเดิม ถ้าใหม่ให้ auto-generate
     const name = editProduct ? editProduct.name : buildAutoName(cat, mat, gemVal || '');
 
-    // อัปโหลดรูปถ้ามีไฟล์ใหม่ (รองรับ 3 รูป: หลัก + อีก 2)
+    // รอรูปที่กำลังเตรียม แล้วอัปโหลดพร้อมกัน (รองรับ 3 รูป: หลัก + อีก 2)
+    const pendingImagePreparation = imagePreparePromises.filter(Boolean);
+    if (pendingImagePreparation.length) {
+      document.getElementById('upload-status').textContent = '⏳ รอเตรียมรูปให้เสร็จ…';
+      await Promise.all(pendingImagePreparation);
+    }
+    const imageErrorIndex = imagePrepareErrors.findIndex(Boolean);
+    if (imageErrorIndex >= 0) {
+      throw new Error(`รูป ${imageErrorIndex + 1}: ${imagePrepareErrors[imageErrorIndex].message}`);
+    }
+
     const imageUrls = [
       normalizeImgUrl(document.getElementById('p-imgurl-0').value),
       normalizeImgUrl(document.getElementById('p-imgurl-1').value),
       normalizeImgUrl(document.getElementById('p-imgurl-2').value)
     ];
-    for (let i = 0; i < 3; i++) {
-      if (selectedFiles[i]) {
-        document.getElementById('upload-status').textContent = `☁️ กำลังอัปโหลดรูป ${i + 1}…`;
-        const compressed = await compressImage(selectedFiles[i]);
-        imageUrls[i] = await driveUploadImage(compressed, sku + (i > 0 ? '_' + (i + 1) : ''));
+    const uploadItems = selectedFiles
+      .map((file, idx) => ({ file, idx }))
+      .filter(item => item.file);
+    if (uploadItems.length) {
+      let uploadedCount = 0;
+      document.getElementById('upload-status').textContent = `☁️ กำลังอัปโหลด 0/${uploadItems.length} รูป…`;
+      const uploadResults = await Promise.all(uploadItems.map(async item => {
+        try {
+          const url = await driveUploadImage(
+            item.file,
+            sku + (item.idx > 0 ? '_' + (item.idx + 1) : '')
+          );
+          uploadedCount++;
+          document.getElementById('upload-status').textContent =
+            `☁️ กำลังอัปโหลด ${uploadedCount}/${uploadItems.length} รูป…`;
+          return { ...item, url };
+        } catch (error) {
+          return { ...item, error };
+        }
+      }));
+
+      const failedUploads = uploadResults.filter(result => result.error);
+      if (failedUploads.length) {
+        const uploadedThisTime = uploadResults
+          .filter(result => result.url)
+          .map(result => result.url);
+        await Promise.all(uploadedThisTime.map(url => driveDeleteImage(url).catch(() => {})));
+        const firstFailure = failedUploads[0];
+        throw new Error(`อัปโหลดรูป ${firstFailure.idx + 1} ไม่สำเร็จ: ${firstFailure.error.message}`);
       }
-    }
-    if (selectedFiles.some(Boolean)) {
+      uploadResults.forEach(result => { imageUrls[result.idx] = result.url; });
       document.getElementById('upload-status').textContent = '✅ อัปโหลดรูปสำเร็จ';
     }
     // กันรูปหลักว่าง: ถ้ามีรูปเพิ่มเติมแต่รูปหลักว่าง ให้เลื่อนขึ้นมาเป็นรูปหลักอัตโนมัติ
